@@ -1,1 +1,3 @@
 # Large files baseline (files > 1MB)
+caframework-v0.1.0-android8plus.apk
+caframework-v0.1.0-android8plus.apk.idsig

@@ -1,11 +1,11 @@
-use caf_xtask::gcc_mock::{create_mock_app, init_dev_keys, MockState};
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
-use tower::ServiceExt;
 use axum::{
     body::Body,
     http::{Request, StatusCode},
 };
+use caf_xtask::gcc_mock::{MockState, create_mock_app, init_dev_keys};
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
+use tower::ServiceExt;
 
 #[tokio::test]
 async fn test_gcc_mock_contract_compliance() {
@@ -29,7 +29,9 @@ async fn test_gcc_mock_contract_compliance() {
         .method("POST")
         .uri("/v1/auth/otp/request")
         .header("content-type", "application/json")
-        .body(Body::from(r#"{"email":"pro@example.com","product_code":"CACASH"}"#))
+        .body(Body::from(
+            r#"{"email":"pro@example.com","product_code":"CACASH"}"#,
+        ))
         .unwrap();
     let res = app.clone().oneshot(req).await.unwrap();
     assert_eq!(res.status(), StatusCode::ACCEPTED);
@@ -43,8 +45,10 @@ async fn test_gcc_mock_contract_compliance() {
         .unwrap();
     let res = app.clone().oneshot(req).await.unwrap();
     assert_eq!(res.status(), StatusCode::OK);
-    
-    let body_bytes = axum::body::to_bytes(res.into_body(), 1024 * 1024).await.unwrap();
+
+    let body_bytes = axum::body::to_bytes(res.into_body(), 1024 * 1024)
+        .await
+        .unwrap();
     let val: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
     let device_token = val["device_token"].as_str().unwrap().to_string();
 

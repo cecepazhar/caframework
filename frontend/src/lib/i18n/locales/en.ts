@@ -61,7 +61,16 @@ const en = {
     vault: 'Encrypted Vault',
     ai_copilot: 'AI Copilot',
     settings: 'Settings',
-    contribution: 'Support & Contribution'
+    contribution: 'Support & Contribution',
+    dashboard: 'Dashboard',
+    table: 'Table',
+    form: 'Form',
+    cards: 'Cards',
+    analytics: 'Analytics',
+    landing: 'Landing',
+    blog: 'Blog',
+    changelog: 'Changelog',
+    docs: 'Docs'
   },
   notes: {
     title: 'Notes & Vault',
@@ -1252,7 +1261,9 @@ const en = {
     setGroup: 'Set Group',
     removeGroup: 'Remove from Group',
     closeGroup: 'Close Group "{{group}}"',
-    closeSession: 'Close session'
+    closeSession: 'Close session',
+    allMenus: 'All Menus',
+    bottomNav: 'Bottom Navigation'
   },
   sftp: {
     title: 'Files (SFTP)',

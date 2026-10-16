@@ -85,6 +85,74 @@ export async function invoke_aiChat(prompt: string, privacyLevel: any | null, co
   return invoke('ai_chat', { prompt: prompt, privacy_level: privacyLevel, consent_given: consentGiven });
 }
 
+export async function invoke_aiGetProviders(): Promise<any[]> {
+  return invoke('ai_get_providers');
+}
+
+export async function invoke_aiSaveProvider(provider: any): Promise<any> {
+  return invoke('ai_save_provider', { provider: provider });
+}
+
+export async function invoke_aiDeleteProvider(id: string): Promise<any> {
+  return invoke('ai_delete_provider', { id: id });
+}
+
+export async function invoke_aiGetRoutingMatrix(): Promise<any[]> {
+  return invoke('ai_get_routing_matrix');
+}
+
+export async function invoke_aiSaveRoutingRule(rule: any): Promise<any> {
+  return invoke('ai_save_routing_rule', { rule: rule });
+}
+
+export async function invoke_aiGetPersonas(): Promise<any[]> {
+  return invoke('ai_get_personas');
+}
+
+export async function invoke_aiSavePersona(persona: any): Promise<any> {
+  return invoke('ai_save_persona', { persona: persona });
+}
+
+export async function invoke_aiDeletePersona(id: string): Promise<any> {
+  return invoke('ai_delete_persona', { id: id });
+}
+
+export async function invoke_aiGetHabits(): Promise<any[]> {
+  return invoke('ai_get_habits');
+}
+
+export async function invoke_aiSearchHabits(query: string, limit: number | null): Promise<any[]> {
+  return invoke('ai_search_habits', { query: query, limit: limit });
+}
+
+export async function invoke_aiToggleHabitPin(id: string): Promise<boolean> {
+  return invoke('ai_toggle_habit_pin', { id: id });
+}
+
+export async function invoke_aiDeleteHabit(id: string): Promise<any> {
+  return invoke('ai_delete_habit', { id: id });
+}
+
+export async function invoke_aiGetSkills(): Promise<any[]> {
+  return invoke('ai_get_skills');
+}
+
+export async function invoke_aiSaveSkill(skill: any): Promise<any> {
+  return invoke('ai_save_skill', { skill: skill });
+}
+
+export async function invoke_aiDeleteSkill(id: string): Promise<any> {
+  return invoke('ai_delete_skill', { id: id });
+}
+
+export async function invoke_aiDispatchTask(taskType: string, query: string, terminalCtx: any | null): Promise<any> {
+  return invoke('ai_dispatch_task', { task_type: taskType, query: query, terminal_ctx: terminalCtx });
+}
+
+export async function invoke_aiDispatchTaskWithSkill(taskType: string, query: string, skillName: string | null, terminalCtx: any | null): Promise<any> {
+  return invoke('ai_dispatch_task_with_skill', { task_type: taskType, query: query, skill_name: skillName, terminal_ctx: terminalCtx });
+}
+
 export async function invoke_submitFeedback(rating: number, content: string, name: string | null, profession: string | null): Promise<any> {
   return invoke('submit_feedback', { rating: rating, content: content, name: name, profession: profession });
 }

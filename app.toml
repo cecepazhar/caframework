@@ -32,11 +32,74 @@ default_role = "member"
 allowed_roles = ["owner", "partner", "member", "child"]
 
 [[menus]]
+key = "dashboard"
+label = "Dashboard"
+href = "/dashboard"
+icon = "dashboard"
+description = "Overview metrics, quick actions & executive summary"
+
+[[menus]]
 key = "notes"
 label = "Notes"
 href = "/"
 icon = "notes"
 description = "Encrypted personal notes vertical slice"
+
+[[menus]]
+key = "table"
+label = "Table"
+href = "/table"
+icon = "table"
+description = "High-performance data grid, sorting & pagination"
+
+[[menus]]
+key = "form"
+label = "Form"
+href = "/form"
+icon = "form"
+description = "Multi-step data entry, validation & rich input controls"
+
+[[menus]]
+key = "cards"
+label = "Cards"
+href = "/cards"
+icon = "cards"
+description = "Entity catalog, badge statuses & card views"
+
+[[menus]]
+key = "analytics"
+label = "Analytics"
+href = "/analytics"
+icon = "analytics"
+description = "Progress bars, telemetry stats & visual indicators"
+
+[[menus]]
+key = "landing"
+label = "Landing"
+href = "/landing"
+icon = "landing"
+description = "Public landing page presentation & features"
+
+[[menus]]
+key = "blog"
+label = "Blog"
+href = "/blog"
+icon = "blog"
+description = "Technical articles, guides & release announcements"
+
+[[menus]]
+key = "changelog"
+label = "Changelog"
+href = "/changelog"
+icon = "changelog"
+description = "Release history, roadmap & update notes"
+
+[[menus]]
+key = "docs"
+label = "Docs"
+href = "/docs"
+icon = "docs"
+description = "Framework & developer documentation"
 
 [billing]
 enabled = true

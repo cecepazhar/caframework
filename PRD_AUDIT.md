@@ -1,6 +1,6 @@
 # CAFramework PRD Audit — Vault prd.md (FR-1..19) + DESIGN.md/ARCHITECTURE.md vs Implementasi
 
-> Audit: 2026-10-11 · Base: `/home/cecepazhar/Product/caframework` · Metode: statis
+> Audit: 2026-10-11 · Base: `~/Product/caframework` · Metode: statis
 
 ## Hasil: 15/19 FR (79%) · Design Compliance: PASS (CADS v1.0 dogfood)
 

@@ -58,11 +58,20 @@ const id: Dictionary = {
   },
   nav: {
     notes: 'Catatan',
-    workspace: 'Workspace',
-    vault: 'Vault Terenkripsi',
-    ai_copilot: 'AI Copilot',
+    workspace: 'Ruang Kerja',
+    vault: 'Brankas Terenkripsi',
+    ai_copilot: 'Kopilot AI',
     settings: 'Pengaturan',
-    contribution: 'Dukungan & Kontribusi'
+    contribution: 'Dukungan & Kontribusi',
+    dashboard: 'Dasbor',
+    table: 'Tabel',
+    form: 'Formulir',
+    cards: 'Kartu',
+    analytics: 'Analitik',
+    landing: 'Beranda',
+    blog: 'Blog',
+    changelog: 'Catatan Rilis',
+    docs: 'Dokumentasi'
   },
   notes: {
     title: 'Catatan & Brankas',
@@ -1253,7 +1262,9 @@ const id: Dictionary = {
     setGroup: 'Atur Grup',
     removeGroup: 'Hapus dari Grup',
     closeGroup: 'Tutup Grup "{{group}}"',
-    closeSession: 'Tutup sesi'
+    closeSession: 'Tutup sesi',
+    allMenus: 'Semua Menu',
+    bottomNav: 'Navigasi Bawah'
   },
   sftp: {
     title: 'Berkas (SFTP)',
