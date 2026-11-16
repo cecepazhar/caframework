@@ -16,6 +16,7 @@ name = "caf-xtask"
 path = "src/main.rs"
 
 [dependencies]
+caf-template = { path = "../caf-template" }
 clap = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

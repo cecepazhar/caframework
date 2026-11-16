@@ -1,0 +1,23 @@
+[variant]
+key = "lite"
+extends = "app.toml"
+
+[variant.app]
+name = "Example Lite"
+identifier = "com.example.app.lite"
+accent = "sky"
+platforms = ["windows", "android"]
+icon = "assets/variants/lite/icon.png"
+
+[variant.modules]
+include = ["catalog", "orders"]
+framework = { ai = false, scheduler = true }
+
+[variant.defaults]
+"orders.reservation" = false
+
+[variant.locked]
+keys = ["orders"]
+
+[variant.pro.features]
+ai_assistant = "pro"

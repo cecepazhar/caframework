@@ -1,0 +1,24 @@
+[package]
+name = "caf-template"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "CAFramework template configuration, validation, JSON schema, and code generation"
+
+[lib]
+name = "caf_template"
+path = "src/lib.rs"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+toml = "0.8"
+thiserror = { workspace = true }
+schemars = "0.8.22"
+regex = "1"
+walkdir = "2"
+
+[dev-dependencies]
+proptest = "1"

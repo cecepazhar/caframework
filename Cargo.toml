@@ -6,6 +6,7 @@ members = [
     "crates/caf-app",
     "crates/caf-xtask",
     "crates/caf-migrator",
+    "crates/caf-template",
 ]
 
 [workspace.package]

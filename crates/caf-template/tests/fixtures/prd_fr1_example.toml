@@ -1,0 +1,120 @@
+[app]
+name = "My App"
+slug = "myapp"
+code = "MYA"
+identifier = "com.example.myapp"
+accent = "indigo"
+default_locale = "id"
+locales = ["id", "en"]
+platforms = ["linux", "windows", "macos", "android"]
+caframework_version = "0.1.0"
+
+[brand]
+developer = "Cecep Saeful Azhar"
+company = "Fathforce"
+website = "https://www.cecepazhar.com"
+email = "hi@cecepazhar.com"
+phone = "+6285220696117"        # E.164; shown as 0852 2069 6117 for locale id
+support_url = ""                # optional; defaults to website
+copyright = "© {year} Cecep Saeful Azhar Hidayat, ST"
+logo = "assets/logo.svg"
+show_on_lock_screen = true
+
+[window]                        # optional
+width = 1200
+height = 800
+
+[modules]
+profiles = true
+ai = true
+pro = true                      # v1.1: Pro package is always generated; false only hides it
+feedback = true
+updater = true
+crash = true
+integrations = true
+scheduler = true
+support_page = false
+# backup and data import/export are mandatory and cannot be listed here
+
+[rbac]                          # v1.1 (replaces [profiles].roles / owner_role)
+super_role = "super_admin"
+allow_runtime_roles = true      # super role may create roles and edit the matrix at runtime
+
+[[rbac.roles]]
+key = "super_admin"
+label_en = "Super admin"
+label_id = "Super admin"
+permissions = ["*"]
+
+[[rbac.roles]]
+key = "admin"
+label_en = "Admin"
+label_id = "Admin"
+permissions = ["notes:*", "users:view", "backup:export", "data:export", "scheduler:view"]
+
+[[rbac.roles]]
+key = "member"
+label_en = "Member"
+label_id = "Anggota"
+permissions = ["notes:view", "notes:create", "notes:update", "notes:delete"]
+
+[[rbac.roles]]
+key = "viewer"
+label_en = "Viewer"
+label_id = "Pengamat"
+permissions = ["notes:view"]
+
+[profiles]
+pin_required_for = ["super_admin", "admin", "member"]
+age_stages = []                 # optional, product-defined: [{ key, min_age, max_age }]
+
+[endpoints]                     # empty = feature disabled at build time
+gcc_base_url = ""
+updater_manifest_url = ""
+
+[pro]                           # v1.1
+gcc_product_id = ""             # product id on GCC; empty = licence server not configured
+trial_days = 14
+device_limit = 3
+offline_grace_days = 7
+
+[pro.features]                  # feature key -> "free" | "pro"
+ai_assistant = "pro"
+scheduled_backup = "free"
+data_export_xlsx = "pro"
+
+[[integrations]]                # v1.1
+key = "gcc"
+kind = "gcc"                    # gcc | rest
+base_url_from = "endpoints.gcc_base_url"
+
+[[integrations]]
+key = "weather"
+kind = "rest"
+base_url = ""                   # empty + user_configurable = set in Settings
+user_configurable = true
+auth = "api_key_header"         # none | api_key_header | api_key_query | bearer | basic | hmac_sha256 | oauth2_client_credentials
+auth_header = "X-Api-Key"
+timeout_ms = 15000
+retries = 2
+
+[[jobs]]                        # v1.1; built-in jobs are listed by the framework, products add their own
+key = "backup.scheduled"
+schedule = "0 2 * * 1"          # cron (5 fields, local time) or preset: hourly | daily | weekly | monthly
+enabled = true
+
+[[entities]]                    # v1.1; data import/export registry (sample shows Notes)
+key = "notes"
+label_en = "Notes"
+label_id = "Catatan"
+natural_key = []                # optional unique business key for upserts
+formats = ["csv", "xlsx", "json"]
+
+[[menus]]
+key = "notes"
+label_en = "Notes"
+label_id = "Catatan"
+icon = "M3 7h18M3 12h18M3 17h18"   # 24x24 outline SVG path
+accent = ""                        # optional override
+group = "daily"                    # sidebar group key (labels via i18n)
+permission = "notes:view"          # v1.1: replaces roles = [...]

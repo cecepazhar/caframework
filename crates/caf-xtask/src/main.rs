@@ -1,5 +1,6 @@
+use caf_template::config::AppConfigFile;
+use caf_template::validation::validate_app_toml;
 use clap::{Parser, Subcommand};
-use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -41,10 +42,20 @@ enum Commands {
         #[arg(long)]
         only: Option<String>,
     },
-    /// Validate app.toml config schema
+    /// Validate app.toml config schema (preferred)
+    Validate {
+        #[arg(short, long, default_value = "app.toml")]
+        config: PathBuf,
+    },
+    /// Validate app.toml config schema (alias for validate, deprecated)
     Check {
         #[arg(short, long, default_value = "app.toml")]
         config: PathBuf,
+    },
+    /// Generate JSON schema for app.toml
+    Schema {
+        #[arg(short, long, default_value = "docs/contracts/app-toml.schema.json")]
+        out: PathBuf,
     },
     /// Run local GCC Billing Hub mock server
     GccMock {
@@ -53,264 +64,58 @@ enum Commands {
     },
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AppConfig {
-    pub app: AppMeta,
-    pub window: WindowConfig,
-    pub security: SecurityConfig,
-    pub modules: ModulesConfig,
-    pub roles: RolesConfig,
-    pub menus: Vec<MenuItem>,
-    pub billing: Option<BillingSectionConfig>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BillingPublicKey {
-    pub kid: String,
-    pub ed25519: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BillingSectionConfig {
-    pub enabled: bool,
-    pub product_code: String,
-    pub gcc_base_url: String,
-    pub public_keys: Vec<BillingPublicKey>,
-    pub offline_days: u32,
-    pub refresh_hours: u32,
-    pub currencies: Vec<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AppMeta {
-    pub name: String,
-    pub slug: String,
-    pub bundle_id: String,
-    pub version: String,
-    pub accent_color: String,
-    pub error_prefix: String,
-    pub description: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct WindowConfig {
-    pub title: String,
-    pub width: u32,
-    pub height: u32,
-    pub min_width: u32,
-    pub min_height: u32,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SecurityConfig {
-    pub master_password_required: bool,
-    pub profile_pin_enabled: bool,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ModulesConfig {
-    pub sample_slice_enabled: bool,
-    pub ai_assistant_enabled: bool,
-    pub pro_licensing_enabled: bool,
-    pub updater_enabled: bool,
-    pub crash_reporting_enabled: bool,
-    pub backup_restore_enabled: bool,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RolesConfig {
-    pub default_role: String,
-    pub allowed_roles: Vec<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MenuItem {
-    pub key: String,
-    pub label: String,
-    pub href: String,
-    pub icon: String,
-    pub description: String,
-}
-
-fn load_config(path: &Path) -> Result<AppConfig, Box<dyn std::error::Error>> {
+fn load_and_validate_config(path: &Path) -> Result<AppConfigFile, Box<dyn std::error::Error>> {
     let content = fs::read_to_string(path)?;
-    let cfg: AppConfig = toml::from_str(&content)?;
-    if cfg.menus.is_empty() {
-        return Err("app.toml must contain at least one menu entry".into());
-    }
-    if let Some(ref b) = cfg.billing {
-        if b.enabled && b.product_code.trim().is_empty() {
-            return Err("[billing] product_code cannot be empty when billing is enabled".into());
-        }
-        if b.enabled && b.public_keys.is_empty() {
-            return Err(
-                "[billing] public_keys must contain at least one key when billing is enabled"
-                    .into(),
-            );
+    let root = path.parent().unwrap_or_else(|| Path::new("."));
+    match validate_app_toml(&content, Some(root)) {
+        Ok(cfg) => Ok(cfg),
+        Err(errs) => {
+            let mut msg = format!("Validation failed with {} error(s):\n", errs.len());
+            for e in errs {
+                msg.push_str(&format!("  {}\n", e));
+            }
+            Err(msg.into())
         }
     }
-    Ok(cfg)
+}
+
+fn run_validate(config_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    let cfg = load_and_validate_config(config_path)?;
+    println!("app.toml validation succeeded for {}", cfg.app.name);
+    Ok(())
+}
+
+fn run_schema(out_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    let schema_json = caf_template::schema::generate_app_config_schema();
+    if let Some(parent) = out_path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    fs::write(out_path, schema_json)?;
+    println!("JSON Schema successfully written to {:?}", out_path);
+    Ok(())
 }
 
 fn run_codegen(config_path: &Path, check: bool) -> Result<(), Box<dyn std::error::Error>> {
-    let cfg = load_config(config_path)?;
+    let cfg = load_and_validate_config(config_path)?;
     let root = config_path.parent().unwrap_or_else(|| Path::new("."));
 
+    // 1. Generate TS Bindings (commands.rs)
+    if !check {
+        crate::codegen::ts_bindings::generate_bindings(root)?;
+    }
+
+    // 2. Run caf-template codegen
+    caf_template::codegen::run_codegen_on_root(root, &cfg, check)?;
+
     if check {
-        println!("Codegen check passed (stub/ok)");
-        return Ok(());
+        println!("Codegen check passed: all generated files are up to date.");
+    } else {
+        println!("Codegen completed successfully for {}", cfg.app.name);
     }
-
-    // Generate TS Bindings (F7.1)
-    crate::codegen::ts_bindings::generate_bindings(root)?;
-
-    // 1. Generate frontend/src/lib/generated/app.ts
-    let gen_dir = root.join("frontend/src/lib/generated");
-    fs::create_dir_all(&gen_dir)?;
-
-    let app_ts_content = format!(
-        r#"// THIS FILE IS AUTOMATICALLY GENERATED BY `cargo xtask codegen`. DO NOT EDIT MANUALLY.
-
-export const APP_CONFIG = {{
-  name: {:?},
-  slug: {:?},
-  bundleId: {:?},
-  version: {:?},
-  accentColor: {:?},
-  errorPrefix: {:?},
-  description: {:?},
-  window: {{
-    title: {:?},
-    width: {},
-    height: {},
-    minWidth: {},
-    minHeight: {}
-  }},
-  security: {{
-    masterPasswordRequired: {},
-    profilePinEnabled: {}
-  }},
-  modules: {{
-    sampleSliceEnabled: {},
-    aiAssistantEnabled: {},
-    proLicensingEnabled: {},
-    updaterEnabled: {},
-    crashReportingEnabled: {},
-    backupRestoreEnabled: {}
-  }},
-  roles: {{
-    defaultRole: {:?},
-    allowedRoles: {:?}
-  }}
-}} as const;
-"#,
-        cfg.app.name,
-        cfg.app.slug,
-        cfg.app.bundle_id,
-        cfg.app.version,
-        cfg.app.accent_color,
-        cfg.app.error_prefix,
-        cfg.app.description,
-        cfg.window.title,
-        cfg.window.width,
-        cfg.window.height,
-        cfg.window.min_width,
-        cfg.window.min_height,
-        cfg.security.master_password_required,
-        cfg.security.profile_pin_enabled,
-        cfg.modules.sample_slice_enabled,
-        cfg.modules.ai_assistant_enabled,
-        cfg.modules.pro_licensing_enabled,
-        cfg.modules.updater_enabled,
-        cfg.modules.crash_reporting_enabled,
-        cfg.modules.backup_restore_enabled,
-        cfg.roles.default_role,
-        cfg.roles.allowed_roles,
-    );
-    fs::write(gen_dir.join("app.ts"), app_ts_content)?;
-
-    // 2. Generate frontend/src/lib/generated/navItems.generated.ts
-    let mut nav_items_ts = String::from(
-        r#"// THIS FILE IS AUTOMATICALLY GENERATED BY `cargo xtask codegen`. DO NOT EDIT MANUALLY.
-
-export interface GeneratedNavItem {
-  key: string;
-  label: string;
-  href: string;
-  icon: string;
-  description: string;
-  path: string;
-}
-
-export const GENERATED_NAV_ITEMS: GeneratedNavItem[] = [
-"#,
-    );
-
-    for m in &cfg.menus {
-        let path_svg = match m.icon.as_str() {
-            "notes" => {
-                "M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"
-            }
-            "cash" | "wallet" => {
-                "M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
-            }
-            "table" | "grid" => {
-                "M3 10h18M3 14h18m-9-4v8m-7 4h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-            }
-            "form" | "edit" => {
-                "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-            }
-            "cards" | "layers" => {
-                "M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6z M14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6z M4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2z M14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
-            }
-            "analytics" | "bar" | "chart" | "monitoring" => {
-                "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-            }
-            "dashboard" | "home" => {
-                "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
-            }
-            "landing" | "globe" => {
-                "M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
-            }
-            "blog" | "article" => {
-                "M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"
-            }
-            "changelog" | "history" => "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z",
-            "docs" | "book" => {
-                "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-            }
-            "sftp" | "folder" => {
-                "M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
-            }
-            "snippets" | "code" => "M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4",
-            "prompt-studio" | "sparkles" => {
-                "M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"
-            }
-            "tasks" | "check" => {
-                "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
-            }
-            "security" | "shield" => {
-                "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-            }
-            "teams" | "users" => {
-                "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-            }
-            _ => "M4 6h16M4 12h16M4 18h16",
-        };
-        nav_items_ts.push_str(&format!(
-            "  {{\n    key: {:?},\n    label: {:?},\n    href: {:?},\n    icon: {:?},\n    description: {:?},\n    path: {:?}\n  }},\n",
-            m.key, m.label, m.href, m.icon, m.description, path_svg
-        ));
-    }
-    nav_items_ts.push_str("];\n");
-    fs::write(gen_dir.join("navItems.generated.ts"), nav_items_ts)?;
-
-    println!("Codegen completed successfully for {}", cfg.app.name);
     Ok(())
 }
 
 fn run_generate_icons() -> Result<(), Box<dyn std::error::Error>> {
-    // Placeholder: In real implementation, invoke ImageMagick or similar to generate PNG/ICNS from app-icon.svg
     println!("Generating icons from app-icon.svg (stub)");
     Ok(())
 }
@@ -321,7 +126,7 @@ fn run_new_app(
     with_sample: bool,
     dry_run: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let cfg = load_config(config_path)?;
+    let cfg = load_and_validate_config(config_path)?;
     println!(
         "Scaffolding new app '{}' ({}) into {:?}",
         cfg.app.name, cfg.app.slug, out_dir
@@ -348,7 +153,6 @@ fn run_new_app(
     };
     fs::create_dir_all(out_dir)?;
 
-    // Use git ls-files to whitelist files (ignores git-ignored heavy dirs like node_modules, target)
     let output = std::process::Command::new("git")
         .arg("ls-files")
         .current_dir(&template_root)
@@ -376,7 +180,6 @@ fn run_new_app(
             continue;
         }
 
-        // Apply `--with-sample` logic correctly
         if !with_sample
             && (rel_str.contains("sample") || rel_str.contains("fixture"))
             && !rel_str.contains("guard_tests")
@@ -402,8 +205,8 @@ fn run_new_app(
                 let replaced = content
                     .replace("CAFramework", &cfg.app.name)
                     .replace("caframework", &cfg.app.slug)
-                    .replace("com.fathforce.caframework", &cfg.app.bundle_id)
-                    .replace("CAF", &cfg.app.error_prefix);
+                    .replace("com.fathforce.caframework", &cfg.app.identifier)
+                    .replace("CAF", &cfg.app.code);
                 fs::write(&dest, replaced)?;
             } else {
                 fs::copy(&path, &dest)?;
@@ -411,7 +214,6 @@ fn run_new_app(
         }
     }
 
-    // Ensure frontend/build placeholder exists so tauri generate_context doesn't fail
     let build_dir = out_dir.join("frontend/build");
     fs::create_dir_all(&build_dir)?;
     if !build_dir.join("index.html").exists() {
@@ -421,10 +223,7 @@ fn run_new_app(
         )?;
     }
 
-    // Write app.toml to target
     fs::copy(config_path, out_dir.join("app.toml"))?;
-
-    // Run codegen in target
     run_codegen(&out_dir.join("app.toml"), false)?;
 
     println!("Successfully scaffolded {} at {:?}", cfg.app.name, out_dir);
@@ -436,17 +235,16 @@ pub mod gcc_mock;
 mod guard;
 mod scanner;
 
-fn run_check(config_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
-    let cfg = load_config(config_path)?;
-    println!("app.toml validation succeeded for {}", cfg.app.name);
-    Ok(())
-}
-
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
     match cli.command {
         Commands::GenerateIcons => run_generate_icons(),
-        Commands::Check { config } => run_check(&config),
+        Commands::Validate { config } => run_validate(&config),
+        Commands::Check { config } => {
+            eprintln!("warning: 'check' is deprecated; use 'validate' instead.");
+            run_validate(&config)
+        }
+        Commands::Schema { out } => run_schema(&out),
         Commands::Codegen { config, check } => run_codegen(&config, check),
         Commands::NewApp {
             config,

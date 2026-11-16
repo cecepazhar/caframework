@@ -661,11 +661,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "caf-template"
+version = "0.1.0-dev"
+dependencies = [
+ "proptest",
+ "regex",
+ "schemars 0.8.22",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.20",
+ "toml 0.8.2",
+ "walkdir",
+]
+
+[[package]]
 name = "caf-xtask"
 version = "0.1.0-dev"
 dependencies = [
  "axum",
  "base64 0.23.1",
+ "caf-template",
  "chrono",
  "clap",
  "convert_case",

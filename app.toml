@@ -1,114 +1,118 @@
 [app]
 name = "CAFramework"
 slug = "caframework"
-bundle_id = "com.fathforce.caframework"
-version = "0.1.0-dev"
-accent_color = "indigo"
-error_prefix = "CAF"
-description = "Privacy-first modular application starter framework"
-brand = "CAFramework"
+code = "CAF"
+identifier = "com.fathforce.caframework"
+accent = "indigo"
+default_locale = "id"
+locales = ["id", "en"]
+platforms = ["linux", "windows", "macos", "android"]
+caframework_version = "0.1.0"
+
+[brand]
+developer = "Cecep Saeful Azhar"
+company = "Fathforce"
+website = "https://www.cecepazhar.com"
+email = "hi@cecepazhar.com"
+phone = "+6285220696117"
+support_url = ""
+copyright = "© {year} Cecep Saeful Azhar Hidayat, ST"
+logo = "assets/logo.svg"
+show_on_lock_screen = true
 
 [window]
-title = "CAFramework"
 width = 1200
 height = 800
-min_width = 360
-min_height = 500
-
-[security]
-master_password_required = true
-profile_pin_enabled = true
+min_width = 900
+min_height = 600
+resizable = true
 
 [modules]
-sample_slice_enabled = true
-ai_assistant_enabled = true
-pro_licensing_enabled = true
-updater_enabled = true
-crash_reporting_enabled = true
-backup_restore_enabled = true
+profiles = true
+ai = true
+pro = true
+feedback = true
+updater = true
+crash = true
+integrations = true
+scheduler = true
+support_page = false
 
-[roles]
-default_role = "member"
-allowed_roles = ["owner", "partner", "member", "child"]
+[rbac]
+super_role = "super_admin"
+allow_runtime_roles = true
 
-[[menus]]
-key = "dashboard"
-label = "Dashboard"
-href = "/dashboard"
-icon = "dashboard"
-description = "Overview metrics, quick actions & executive summary"
+[[rbac.roles]]
+key = "super_admin"
+label_en = "Super admin"
+label_id = "Super admin"
+permissions = ["*"]
 
-[[menus]]
-key = "notes"
-label = "Notes"
-href = "/"
-icon = "notes"
-description = "Encrypted personal notes vertical slice"
+[[rbac.roles]]
+key = "admin"
+label_en = "Admin"
+label_id = "Admin"
+permissions = ["notes:*", "users:view", "backup:export", "data:export", "scheduler:view"]
 
-[[menus]]
-key = "table"
-label = "Table"
-href = "/table"
-icon = "table"
-description = "High-performance data grid, sorting & pagination"
+[[rbac.roles]]
+key = "member"
+label_en = "Member"
+label_id = "Anggota"
+permissions = ["notes:view", "notes:create", "notes:update", "notes:delete"]
 
-[[menus]]
-key = "form"
-label = "Form"
-href = "/form"
-icon = "form"
-description = "Multi-step data entry, validation & rich input controls"
+[[rbac.roles]]
+key = "viewer"
+label_en = "Viewer"
+label_id = "Pengamat"
+permissions = ["notes:view"]
 
-[[menus]]
-key = "cards"
-label = "Cards"
-href = "/cards"
-icon = "cards"
-description = "Entity catalog, badge statuses & card views"
+[profiles]
+pin_required_for = ["super_admin", "admin", "member"]
+age_stages = []
 
-[[menus]]
-key = "analytics"
-label = "Analytics"
-href = "/analytics"
-icon = "analytics"
-description = "Progress bars, telemetry stats & visual indicators"
-
-[[menus]]
-key = "landing"
-label = "Landing"
-href = "/landing"
-icon = "landing"
-description = "Public landing page presentation & features"
-
-[[menus]]
-key = "blog"
-label = "Blog"
-href = "/blog"
-icon = "blog"
-description = "Technical articles, guides & release announcements"
-
-[[menus]]
-key = "changelog"
-label = "Changelog"
-href = "/changelog"
-icon = "changelog"
-description = "Release history, roadmap & update notes"
-
-[[menus]]
-key = "docs"
-label = "Docs"
-href = "/docs"
-icon = "docs"
-description = "Framework & developer documentation"
-
-[billing]
-enabled = true
-product_code = "CAFRAMEWORK"
+[endpoints]
 gcc_base_url = "http://127.0.0.1:8888"
-offline_days = 7
+updater_manifest_url = ""
+
+[pro]
+gcc_product_id = "CAFRAMEWORK"
+trial_days = 14
+device_limit = 3
+offline_grace_days = 7
 refresh_hours = 6
 currencies = ["IDR", "USD"]
 
-[[billing.public_keys]]
+[[pro.public_keys]]
 kid = "gcc-2026-10"
 ed25519 = "Su0nese5LuWHeNPFIz69p0HGUsdT49rnEn82fbtY2S8="
+
+[pro.features]
+ai_assistant = "pro"
+scheduled_backup = "free"
+data_export_xlsx = "pro"
+
+[[integrations]]
+key = "gcc"
+kind = "gcc"
+base_url_from = "endpoints.gcc_base_url"
+
+[[jobs]]
+key = "backup.scheduled"
+schedule = "0 2 * * 1"
+enabled = true
+
+[[entities]]
+key = "notes"
+label_en = "Notes"
+label_id = "Catatan"
+natural_key = []
+formats = ["csv", "xlsx", "json"]
+
+[[menus]]
+key = "notes"
+label_en = "Notes"
+label_id = "Catatan"
+icon = "M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"
+accent = ""
+group = "daily"
+permission = "notes:view"

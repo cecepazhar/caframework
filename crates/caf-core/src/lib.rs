@@ -33,6 +33,7 @@ pub mod db;
 pub mod dual_split;
 pub mod error;
 pub mod feedback;
+pub mod generated;
 pub mod http;
 pub mod keyring;
 pub mod migrations;

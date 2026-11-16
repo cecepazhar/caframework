@@ -1,0 +1,803 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AppConfigFile",
+  "type": "object",
+  "required": [
+    "app",
+    "brand",
+    "rbac"
+  ],
+  "properties": {
+    "app": {
+      "$ref": "#/definitions/AppSection"
+    },
+    "brand": {
+      "$ref": "#/definitions/BrandSection"
+    },
+    "endpoints": {
+      "default": null,
+      "anyOf": [
+        {
+          "$ref": "#/definitions/EndpointsSection"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "entities": {
+      "default": [],
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/EntityConfig"
+      }
+    },
+    "integrations": {
+      "default": [],
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/IntegrationConfig"
+      }
+    },
+    "jobs": {
+      "default": [],
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/JobConfig"
+      }
+    },
+    "menus": {
+      "default": [],
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/MenuConfig"
+      }
+    },
+    "modules": {
+      "default": null,
+      "anyOf": [
+        {
+          "$ref": "#/definitions/ModulesSection"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "navigation": {
+      "default": null,
+      "anyOf": [
+        {
+          "$ref": "#/definitions/NavigationSection"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "pro": {
+      "default": null,
+      "anyOf": [
+        {
+          "$ref": "#/definitions/ProSection"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "profiles": {
+      "default": null,
+      "anyOf": [
+        {
+          "$ref": "#/definitions/ProfilesSection"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "rbac": {
+      "$ref": "#/definitions/RbacSection"
+    },
+    "window": {
+      "default": null,
+      "anyOf": [
+        {
+          "$ref": "#/definitions/WindowSection"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "AgeStageConfig": {
+      "type": "object",
+      "required": [
+        "key",
+        "max_age",
+        "min_age"
+      ],
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "max_age": {
+          "type": "integer",
+          "format": "uint8",
+          "minimum": 0.0
+        },
+        "min_age": {
+          "type": "integer",
+          "format": "uint8",
+          "minimum": 0.0
+        }
+      },
+      "additionalProperties": false
+    },
+    "AppSection": {
+      "type": "object",
+      "required": [
+        "accent",
+        "code",
+        "default_locale",
+        "identifier",
+        "locales",
+        "name",
+        "platforms",
+        "slug"
+      ],
+      "properties": {
+        "accent": {
+          "type": "string"
+        },
+        "caframework_version": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "code": {
+          "type": "string"
+        },
+        "default_locale": {
+          "type": "string"
+        },
+        "identifier": {
+          "type": "string"
+        },
+        "locales": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "name": {
+          "type": "string"
+        },
+        "platforms": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "slug": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "BrandSection": {
+      "type": "object",
+      "required": [
+        "copyright",
+        "developer",
+        "email",
+        "logo",
+        "phone",
+        "website"
+      ],
+      "properties": {
+        "company": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "copyright": {
+          "type": "string"
+        },
+        "developer": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "logo": {
+          "type": "string"
+        },
+        "phone": {
+          "type": "string"
+        },
+        "show_on_lock_screen": {
+          "default": true,
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "support_url": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "website": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "EndpointsSection": {
+      "type": "object",
+      "properties": {
+        "gcc_base_url": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "updater_manifest_url": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "EntityConfig": {
+      "type": "object",
+      "required": [
+        "formats",
+        "key",
+        "label_en",
+        "label_id"
+      ],
+      "properties": {
+        "formats": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "key": {
+          "type": "string"
+        },
+        "label_en": {
+          "type": "string"
+        },
+        "label_id": {
+          "type": "string"
+        },
+        "natural_key": {
+          "default": null,
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "IntegrationConfig": {
+      "type": "object",
+      "required": [
+        "key",
+        "kind"
+      ],
+      "properties": {
+        "allowed_hosts": {
+          "default": null,
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "auth": {
+          "default": "none",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "auth_header": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "base_url": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "base_url_from": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "concurrency": {
+          "default": null,
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "key": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "rate_limit_per_minute": {
+          "default": null,
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "retries": {
+          "default": 2,
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "timeout_ms": {
+          "default": 15000,
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "user_configurable": {
+          "default": null,
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "JobConfig": {
+      "type": "object",
+      "required": [
+        "key",
+        "schedule"
+      ],
+      "properties": {
+        "background_safe": {
+          "default": null,
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "enabled": {
+          "default": true,
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "key": {
+          "type": "string"
+        },
+        "schedule": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "MenuConfig": {
+      "type": "object",
+      "required": [
+        "group",
+        "icon",
+        "key",
+        "label_en",
+        "label_id"
+      ],
+      "properties": {
+        "accent": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "group": {
+          "type": "string"
+        },
+        "icon": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "label_en": {
+          "type": "string"
+        },
+        "label_id": {
+          "type": "string"
+        },
+        "permission": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "ModulesSection": {
+      "type": "object",
+      "properties": {
+        "ai": {
+          "default": true,
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "background": {
+          "default": null,
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "builder": {
+          "default": null,
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "crash": {
+          "default": true,
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "feedback": {
+          "default": true,
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "integrations": {
+          "default": true,
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "pro": {
+          "default": true,
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "profiles": {
+          "default": true,
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "scheduler": {
+          "default": true,
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "support_page": {
+          "default": null,
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "updater": {
+          "default": true,
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "NavigationSection": {
+      "type": "object",
+      "properties": {
+        "collapsed_default": {
+          "default": null,
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "primary_action": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "ProPublicKey": {
+      "type": "object",
+      "required": [
+        "ed25519",
+        "kid"
+      ],
+      "properties": {
+        "ed25519": {
+          "type": "string"
+        },
+        "kid": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ProSection": {
+      "type": "object",
+      "properties": {
+        "currencies": {
+          "default": [
+            "IDR",
+            "USD"
+          ],
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "device_limit": {
+          "default": 3,
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "features": {
+          "default": null,
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "gcc_product_id": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "offline_grace_days": {
+          "default": 7,
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "public_keys": {
+          "default": null,
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/definitions/ProPublicKey"
+          }
+        },
+        "refresh_hours": {
+          "default": 6,
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "trial_days": {
+          "default": 14,
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0.0
+        }
+      },
+      "additionalProperties": false
+    },
+    "ProfilesSection": {
+      "type": "object",
+      "properties": {
+        "age_stages": {
+          "default": null,
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/definitions/AgeStageConfig"
+          }
+        },
+        "pin_required_for": {
+          "default": null,
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "RbacSection": {
+      "type": "object",
+      "required": [
+        "super_role"
+      ],
+      "properties": {
+        "allow_runtime_roles": {
+          "default": true,
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "roles": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RoleConfig"
+          }
+        },
+        "super_role": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "RoleConfig": {
+      "type": "object",
+      "required": [
+        "key",
+        "label_en",
+        "label_id"
+      ],
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "label_en": {
+          "type": "string"
+        },
+        "label_id": {
+          "type": "string"
+        },
+        "permissions": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "WindowSection": {
+      "type": "object",
+      "properties": {
+        "height": {
+          "default": 800,
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "min_height": {
+          "default": 600,
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "min_width": {
+          "default": 900,
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "resizable": {
+          "default": true,
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "width": {
+          "default": 1200,
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0.0
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
