@@ -348,4 +348,62 @@ fn tauri_command_registry_build_script_and_acl_agree() {
         excess_policy.is_empty(),
         "policy terdaftar untuk command yang tidak ada di caf-app: {excess_policy:?}"
     );
+
+    // Guard: Every #[tauri::command] in commands.rs must invoke `guarded` or `run_guarded`
+    let commands_code = std::fs::read_to_string(app_dir.join("src").join("commands.rs"))
+        .expect("gagal membaca commands.rs");
+
+    let mut unguarded_commands = Vec::new();
+    let lines: Vec<&str> = commands_code.lines().collect();
+    for (i, line) in lines.iter().enumerate() {
+        if line.trim() == "#[tauri::command]" {
+            // Find function signature on next non-empty line
+            let mut fn_name = String::new();
+            for j in (i + 1)..lines.len().min(i + 5) {
+                if let Some(rest) = lines
+                    .get(j)
+                    .and_then(|l| l.trim().strip_prefix("pub async fn "))
+                    && let Some(ident) = rest.split('(').next()
+                {
+                    fn_name = ident.trim().to_string();
+                    break;
+                }
+            }
+
+            if !fn_name.is_empty() {
+                // Find closing body or search within the function block
+                let mut body = String::new();
+                let mut brace_depth = 0;
+                let mut found_start = false;
+                for j in (i + 1)..lines.len() {
+                    let l = lines.get(j).unwrap_or(&"");
+                    for c in l.chars() {
+                        if c == '{' {
+                            brace_depth += 1;
+                            found_start = true;
+                        } else if c == '}' {
+                            brace_depth -= 1;
+                        }
+                    }
+                    if found_start {
+                        body.push_str(l);
+                        body.push('\n');
+                        if brace_depth == 0 {
+                            break;
+                        }
+                    }
+                }
+
+                if !body.contains("guarded") && !body.contains("run_guarded") {
+                    unguarded_commands.push(fn_name);
+                }
+            }
+        }
+    }
+
+    assert!(
+        unguarded_commands.is_empty(),
+        "The following commands do not call guarded/run_guarded: {:?}",
+        unguarded_commands
+    );
 }

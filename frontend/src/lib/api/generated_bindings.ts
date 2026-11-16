@@ -41,24 +41,56 @@ export async function invoke_listProfiles(): Promise<any[]> {
   return invoke('list_profiles');
 }
 
-export async function invoke_saveProfile(input: any, callerProfileId: string): Promise<any> {
-  return invoke('save_profile', { input: input, caller_profile_id: callerProfileId });
+export async function invoke_saveProfile(input: any): Promise<any> {
+  return invoke('save_profile', { input: input });
+}
+
+export async function invoke_deleteProfile(id: string): Promise<any> {
+  return invoke('delete_profile', { id: id });
 }
 
 export async function invoke_verifyPin(profileId: string, pin: string): Promise<boolean> {
   return invoke('verify_pin', { profile_id: profileId, pin: pin });
 }
 
-export async function invoke_listNotes(callerProfileId: string, isOwner: boolean): Promise<any[]> {
-  return invoke('list_notes', { caller_profile_id: callerProfileId, is_owner: isOwner });
+export async function invoke_profileUnlock(profileId: string, pin: string): Promise<any> {
+  return invoke('profile_unlock', { profile_id: profileId, pin: pin });
 }
 
-export async function invoke_saveNote(input: any, callerProfileId: string): Promise<any> {
-  return invoke('save_note', { input: input, caller_profile_id: callerProfileId });
+export async function invoke_profileLock(): Promise<any> {
+  return invoke('profile_lock');
 }
 
-export async function invoke_deleteNote(id: string, callerProfileId: string): Promise<any> {
-  return invoke('delete_note', { id: id, caller_profile_id: callerProfileId });
+export async function invoke_sessionInfo(): Promise<any> {
+  return invoke('session_info');
+}
+
+export async function invoke_listRoles(): Promise<any[]> {
+  return invoke('list_roles');
+}
+
+export async function invoke_saveRole(input: any): Promise<any> {
+  return invoke('save_role', { input: input });
+}
+
+export async function invoke_deleteRole(key: string): Promise<any> {
+  return invoke('delete_role', { key: key });
+}
+
+export async function invoke_listNotes(): Promise<any[]> {
+  return invoke('list_notes');
+}
+
+export async function invoke_saveNote(input: any): Promise<any> {
+  return invoke('save_note', { input: input });
+}
+
+export async function invoke_deleteNote(id: string): Promise<any> {
+  return invoke('delete_note', { id: id });
+}
+
+export async function invoke_getNotesSummary(): Promise<any[]> {
+  return invoke('get_notes_summary');
 }
 
 export async function invoke_getAiSettings(): Promise<any> {

@@ -79,10 +79,30 @@ pub fn list_profiles() -> Result<Vec<ProfileRecord>, CafError> {
     Ok(list)
 }
 
-pub fn save_profile(
-    input: ProfileInput,
-    caller_profile_id: &str,
-) -> Result<ProfileRecord, CafError> {
+pub fn save_profile(input: ProfileInput) -> Result<ProfileRecord, CafError> {
+    let actor_profile_id = match crate::session::get_current_session() {
+        Ok(s) => s.profile_id,
+        Err(_) => {
+            let conn = db::open()?;
+            let count: i64 = conn
+                .query_row(
+                    "SELECT COUNT(*) FROM profiles WHERE deleted_at IS NULL",
+                    [],
+                    |r| r.get(0),
+                )
+                .unwrap_or(0);
+            if count == 0 {
+                "system".to_string()
+            } else {
+                return Err(CafError::Auth(crate::error::AuthError::Unauthorized));
+            }
+        }
+    };
+
+    if let Some(ref existing_id) = input.id {
+        crate::rbac::ensure_at_least_one_super_profile(existing_id, Some(&input.role), false)?;
+    }
+
     let mut conn = db::open()?;
     let tx = conn
         .transaction()
@@ -145,7 +165,7 @@ pub fn save_profile(
                 now,
                 now,
                 device_id,
-                caller_profile_id
+                actor_profile_id
             ],
         )
         .map_err(|e| CafError::Db(DbError::Generic(e.to_string())))?;
@@ -154,9 +174,9 @@ pub fn save_profile(
     };
 
     if action == "create" {
-        crate::sync::insert(&tx, "profiles", &id, caller_profile_id, &device_id)?;
+        crate::sync::insert(&tx, "profiles", &id, &actor_profile_id, &device_id)?;
     } else {
-        crate::sync::update(&tx, "profiles", &id, rev, caller_profile_id, &device_id)?;
+        crate::sync::update(&tx, "profiles", &id, rev, &actor_profile_id, &device_id)?;
     }
 
     tx.commit()
@@ -179,7 +199,7 @@ pub fn save_profile(
         updated_at: now,
         deleted_at: None,
         origin_device_id: device_id,
-        owner_profile_id: caller_profile_id.to_string(),
+        owner_profile_id: actor_profile_id.to_string(),
         visibility: "shared".into(),
     })
 }
@@ -273,7 +293,10 @@ pub fn get_profile(id: &str) -> Result<Option<ProfileRecord>, CafError> {
     }
 }
 
-pub fn delete_profile(id: &str, caller_profile_id: &str) -> Result<(), CafError> {
+pub fn delete_profile(id: &str) -> Result<(), CafError> {
+    let actor_profile_id = crate::session::current_profile_id()?;
+    crate::rbac::ensure_at_least_one_super_profile(id, None, true)?;
+
     let device_id = crate::paths::device_id()?;
     let mut conn = db::open()?;
     let tx = conn
@@ -287,14 +310,14 @@ pub fn delete_profile(id: &str, caller_profile_id: &str) -> Result<(), CafError>
     )
     .map_err(|e| CafError::Db(DbError::Generic(e.to_string())))?;
 
-    crate::sync::soft_delete(&tx, "profiles", id, 1, caller_profile_id, &device_id)?;
+    crate::sync::soft_delete(&tx, "profiles", id, 1, &actor_profile_id, &device_id)?;
 
     tx.commit()
         .map_err(|e| CafError::Db(DbError::Generic(e.to_string())))?;
 
     let _ = crate::audit::log_event(
         "PROFILE_DELETE",
-        Some(caller_profile_id),
+        Some(&actor_profile_id),
         &format!("Deleted profile {id}"),
     );
     Ok(())
@@ -310,21 +333,25 @@ mod tests {
         let _key = crate::vault::ensure_unlocked_key().expect("vault key");
 
         // 1. Create Profile with PIN "123456"
-        let created = save_profile(
-            ProfileInput {
-                id: None,
-                name: "Prof. Cecep".into(),
-                role: "owner".into(),
-                avatar: Some("hero".into()),
-                pin: Some("123456".into()),
-            },
-            "system",
-        )
+        let created = save_profile(ProfileInput {
+            id: None,
+            name: "Prof. Cecep".into(),
+            role: "owner".into(),
+            avatar: Some("hero".into()),
+            pin: Some("123456".into()),
+        })
         .expect("create profile");
 
         assert_eq!(created.name, "Prof. Cecep");
         assert_eq!(created.role, "owner");
         assert!(created.has_pin);
+
+        // Establish session as created owner
+        crate::session::set_current_session(crate::session::Session::new(
+            &created.id,
+            &created.role,
+        ))
+        .expect("session set");
 
         // 2. Read
         let fetched = get_profile(&created.id)
@@ -340,25 +367,38 @@ mod tests {
         assert!(!wrong);
 
         // 4. Update Profile
-        let updated = save_profile(
-            ProfileInput {
-                id: Some(created.id.clone()),
-                name: "Prof. Cecep Azhar".into(),
-                role: "owner".into(),
-                avatar: Some("hero-star".into()),
-                pin: None, // Keep existing PIN
-            },
-            &created.id,
-        )
+        let updated = save_profile(ProfileInput {
+            id: Some(created.id.clone()),
+            name: "Prof. Cecep Azhar".into(),
+            role: "owner".into(),
+            avatar: Some("hero-star".into()),
+            pin: None, // Keep existing PIN
+        })
         .expect("update profile");
 
         assert_eq!(updated.name, "Prof. Cecep Azhar");
         assert!(updated.has_pin);
         assert!(verify_pin(&created.id, "123456").expect("pin still valid"));
 
-        // 5. Soft Delete
-        delete_profile(&created.id, &created.id).expect("delete profile");
-        let fetched_after = get_profile(&created.id).expect("get after delete");
+        // Invariant 3 test: Deleting the only super role profile must fail
+        let del_super_res = delete_profile(&created.id);
+        assert!(
+            del_super_res.is_err(),
+            "must fail deleting the only super role profile"
+        );
+
+        // 5. Create a secondary member profile and soft delete it
+        let member = save_profile(ProfileInput {
+            id: None,
+            name: "Member Profile".into(),
+            role: "member".into(),
+            avatar: None,
+            pin: None,
+        })
+        .expect("create member");
+
+        delete_profile(&member.id).expect("delete member profile");
+        let fetched_after = get_profile(&member.id).expect("get after delete");
         assert!(fetched_after.is_none());
     }
 }

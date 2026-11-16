@@ -18,14 +18,22 @@ const COMMANDS: &[&str] = &[
     "lock_vault",
     "change_master_password",
     "reset_vault",
-    // Multi-Profile
+    // Multi-Profile & RBAC
     "list_profiles",
     "save_profile",
+    "delete_profile",
     "verify_pin",
+    "profile_unlock",
+    "profile_lock",
+    "session_info",
+    "list_roles",
+    "save_role",
+    "delete_role",
     // Sample Vertical Slice (Notes)
     "list_notes",
     "save_note",
     "delete_note",
+    "get_notes_summary",
     // Generic AI
     "get_ai_settings",
     "save_ai_settings",

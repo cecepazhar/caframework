@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-profile-lock"
+description = "Enables the profile_lock command without any pre-configured scope."
+commands.allow = ["profile_lock"]
+
+[[permission]]
+identifier = "deny-profile-lock"
+description = "Denies the profile_lock command without any pre-configured scope."
+commands.deny = ["profile_lock"]

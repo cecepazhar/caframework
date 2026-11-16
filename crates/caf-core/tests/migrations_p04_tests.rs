@@ -297,6 +297,7 @@ fn test_p04_4_schema_conventions_and_negative_fixture() {
         "ai_habits",         // AI local memory learning habits table
         "ai_custom_skills",  // AI custom skill catalog
         "ai_habits_fts",     // Virtual full-text search table
+        "command_logs",      // Audit event log table
         "sqlite_sequence",   // SQLite internal sequence counter
     ]
     .into_iter()

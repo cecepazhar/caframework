@@ -1,5 +1,7 @@
 //! Command policy classification and registry.
 
+use crate::error::{AuthError, CafError, VaultError};
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Policy {
     /// Works while vault is locked (setup, initial unlock, status, app info).
@@ -80,8 +82,44 @@ pub const COMMAND_POLICIES: &[CommandPolicy] = &[
         returns_list: false,
     },
     CommandPolicy {
+        name: "delete_profile",
+        policy: Policy::Requires("users:manage"),
+        returns_list: false,
+    },
+    CommandPolicy {
         name: "verify_pin",
         policy: Policy::Unlocked,
+        returns_list: false,
+    },
+    CommandPolicy {
+        name: "profile_unlock",
+        policy: Policy::Unlocked,
+        returns_list: false,
+    },
+    CommandPolicy {
+        name: "profile_lock",
+        policy: Policy::Session,
+        returns_list: false,
+    },
+    CommandPolicy {
+        name: "session_info",
+        policy: Policy::Public,
+        returns_list: false,
+    },
+    // RBAC
+    CommandPolicy {
+        name: "list_roles",
+        policy: Policy::Session,
+        returns_list: true,
+    },
+    CommandPolicy {
+        name: "save_role",
+        policy: Policy::Requires("roles:manage"),
+        returns_list: false,
+    },
+    CommandPolicy {
+        name: "delete_role",
+        policy: Policy::Requires("roles:manage"),
         returns_list: false,
     },
     // Notes
@@ -99,6 +137,11 @@ pub const COMMAND_POLICIES: &[CommandPolicy] = &[
         name: "delete_note",
         policy: Policy::Session,
         returns_list: false,
+    },
+    CommandPolicy {
+        name: "get_notes_summary",
+        policy: Policy::Session,
+        returns_list: true,
     },
     // AI
     CommandPolicy {
@@ -258,4 +301,50 @@ pub const COMMAND_POLICIES: &[CommandPolicy] = &[
 
 pub fn get_command_policy(command_name: &str) -> Option<&'static CommandPolicy> {
     COMMAND_POLICIES.iter().find(|cp| cp.name == command_name)
+}
+
+pub fn check_policy(command_name: &'static str) -> Result<(), CafError> {
+    let policy = match get_command_policy(command_name) {
+        Some(cp) => &cp.policy,
+        None => return Err(CafError::Auth(AuthError::Unauthorized)),
+    };
+
+    match policy {
+        Policy::Public => Ok(()),
+        Policy::Unlocked => {
+            if !crate::vault::is_unlocked().unwrap_or(false) {
+                return Err(CafError::Vault(VaultError::Locked));
+            }
+            Ok(())
+        }
+        Policy::Session => {
+            if !crate::vault::is_unlocked().unwrap_or(false) {
+                return Err(CafError::Vault(VaultError::Locked));
+            }
+            let _sess = crate::session::get_current_session()?;
+            Ok(())
+        }
+        Policy::Requires(perm) => {
+            if !crate::vault::is_unlocked().unwrap_or(false) {
+                return Err(CafError::Vault(VaultError::Locked));
+            }
+            let sess = crate::session::get_current_session()?;
+            if sess.has_permission(perm)
+                || sess.has_permission("*")
+                || crate::rbac::is_super_role(&sess.role)
+            {
+                Ok(())
+            } else {
+                Err(CafError::Auth(AuthError::PermissionDenied))
+            }
+        }
+    }
+}
+
+pub fn guarded<F, R>(command_name: &'static str, f: F) -> Result<R, CafError>
+where
+    F: FnOnce() -> Result<R, CafError>,
+{
+    check_policy(command_name)?;
+    f()
 }

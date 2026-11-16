@@ -149,45 +149,50 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
             ProfileAction::Add { name, role, pin } => {
-                let profile = caf_core::profiles::save_profile(
-                    caf_core::profiles::ProfileInput {
-                        id: None,
-                        name,
-                        role,
-                        avatar: None,
-                        pin,
-                    },
+                let _ = caf_core::session::set_current_session(caf_core::session::Session::new(
                     "cli-root",
-                )?;
+                    "super_admin",
+                ));
+                let profile = caf_core::profiles::save_profile(caf_core::profiles::ProfileInput {
+                    id: None,
+                    name,
+                    role,
+                    avatar: None,
+                    pin,
+                })?;
                 println!("Created profile: {} ({})", profile.name, profile.id);
             }
         },
-        Some(Commands::Notes { action }) => match action {
-            NotesAction::List => {
-                let notes = caf_core::notes::list_notes("cli-root", true)?;
-                for n in notes {
-                    println!("- [{}] {} (visibility: {})", n.id, n.title, n.visibility);
+        Some(Commands::Notes { action }) => {
+            match action {
+                NotesAction::List => {
+                    let _ = caf_core::session::set_current_session(
+                        caf_core::session::Session::new("cli-root", "super_admin"),
+                    );
+                    let notes = caf_core::notes::list_notes()?;
+                    for n in notes {
+                        println!("- [{}] {} (visibility: {})", n.id, n.title, n.visibility);
+                    }
                 }
-            }
-            NotesAction::Add {
-                title,
-                content,
-                visibility,
-            } => {
-                let note = caf_core::notes::save_note(
-                    caf_core::notes::NoteInput {
+                NotesAction::Add {
+                    title,
+                    content,
+                    visibility,
+                } => {
+                    let _ = caf_core::session::set_current_session(
+                        caf_core::session::Session::new("cli-root", "super_admin"),
+                    );
+                    let note = caf_core::notes::save_note(caf_core::notes::NoteInput {
                         id: None,
                         title,
                         content,
                         tags: vec![],
                         visibility: Some(visibility),
-                        owner_profile_id: "cli-root".to_string(),
-                    },
-                    "cli-root",
-                )?;
-                println!("Created note: {} ({})", note.title, note.id);
+                    })?;
+                    println!("Created note: {} ({})", note.title, note.id);
+                }
             }
-        },
+        }
         None => {
             println!("caframeworkctl v{}", caf_core::CORE_VERSION);
             println!("Use --help for available subcommands.");

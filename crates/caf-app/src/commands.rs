@@ -1,6 +1,9 @@
 //! Thin Tauri command bindings for CAFramework.
 
-use caf_core::{CafError, ai, backup, crash, feedback, notes, prefs, profiles, vault};
+use caf_core::api::policy::guarded;
+use caf_core::{
+    CafError, ai, backup, crash, feedback, notes, prefs, profiles, rbac, session, vault,
+};
 
 async fn run_blocking<F, R>(f: F) -> Result<R, CafError>
 where
@@ -14,55 +17,75 @@ where
     })?
 }
 
+async fn run_guarded<F, R>(command_name: &'static str, f: F) -> Result<R, CafError>
+where
+    F: FnOnce() -> Result<R, CafError> + Send + 'static,
+    R: Send + 'static,
+{
+    run_blocking(move || guarded(command_name, f)).await
+}
+
 // Window management commands
 #[tauri::command]
 pub async fn window_minimize(#[allow(unused_variables)] window: tauri::Window) {
-    #[cfg(not(target_os = "android"))]
-    let _ = window.minimize();
+    let _ = guarded("window_minimize", || {
+        #[cfg(not(target_os = "android"))]
+        let _ = window.minimize();
+        Ok(())
+    });
 }
 
 #[tauri::command]
 pub async fn window_maximize(#[allow(unused_variables)] window: tauri::Window) {
-    #[cfg(not(target_os = "android"))]
-    {
-        if let Ok(max) = window.is_maximized() {
-            if max {
+    let _ = guarded("window_maximize", || {
+        #[cfg(not(target_os = "android"))]
+        match window.is_maximized() {
+            Ok(true) => {
                 let _ = window.unmaximize();
-            } else {
+            }
+            _ => {
                 let _ = window.maximize();
             }
-        } else {
-            let _ = window.maximize();
         }
-    }
+        Ok(())
+    });
 }
 
 #[tauri::command]
 pub async fn window_close(#[allow(unused_variables)] window: tauri::Window) {
-    #[cfg(not(target_os = "android"))]
-    let _ = window.close();
+    let _ = guarded("window_close", || {
+        #[cfg(not(target_os = "android"))]
+        let _ = window.close();
+        Ok(())
+    });
 }
 
 #[tauri::command]
 pub async fn window_start_dragging(#[allow(unused_variables)] window: tauri::Window) {
-    #[cfg(not(target_os = "android"))]
-    let _ = window.start_dragging();
+    let _ = guarded("window_start_dragging", || {
+        #[cfg(not(target_os = "android"))]
+        let _ = window.start_dragging();
+        Ok(())
+    });
 }
 
 // Vault commands
 #[tauri::command]
 pub async fn is_vault_initialized() -> Result<bool, CafError> {
-    run_blocking(vault::is_vault_initialized).await
+    run_guarded("is_vault_initialized", vault::is_vault_initialized).await
 }
 
 #[tauri::command]
 pub async fn validate_vault_password(password: String) -> Result<bool, CafError> {
-    run_blocking(move || vault::validate_password(&password)).await
+    run_guarded("validate_vault_password", move || {
+        vault::validate_password(&password)
+    })
+    .await
 }
 
 #[tauri::command]
 pub async fn lock_vault() -> Result<(), CafError> {
-    run_blocking(move || {
+    run_guarded("lock_vault", move || {
         vault::lock();
         Ok(())
     })
@@ -74,79 +97,141 @@ pub async fn change_master_password(
     old_password: String,
     new_password: String,
 ) -> Result<(), CafError> {
-    run_blocking(move || vault::change_master_password(&old_password, &new_password)).await
+    run_guarded("change_master_password", move || {
+        vault::change_master_password(&old_password, &new_password)
+    })
+    .await
 }
 
 #[tauri::command]
 pub async fn reset_vault() -> Result<(), CafError> {
-    run_blocking(vault::reset_vault).await
+    run_guarded("reset_vault", vault::reset_vault).await
 }
 
 // Profile commands
 #[tauri::command]
 pub async fn list_profiles() -> Result<Vec<profiles::ProfileRecord>, CafError> {
-    run_blocking(profiles::list_profiles).await
+    run_guarded("list_profiles", profiles::list_profiles).await
 }
 
 #[tauri::command]
 pub async fn save_profile(
     input: profiles::ProfileInput,
-    caller_profile_id: String,
 ) -> Result<profiles::ProfileRecord, CafError> {
-    run_blocking(move || profiles::save_profile(input, &caller_profile_id)).await
+    run_guarded("save_profile", move || profiles::save_profile(input)).await
+}
+
+#[tauri::command]
+pub async fn delete_profile(id: String) -> Result<(), CafError> {
+    run_guarded("delete_profile", move || profiles::delete_profile(&id)).await
 }
 
 #[tauri::command]
 pub async fn verify_pin(profile_id: String, pin: String) -> Result<bool, CafError> {
-    run_blocking(move || profiles::verify_pin(&profile_id, &pin)).await
+    run_guarded("verify_pin", move || {
+        profiles::verify_pin(&profile_id, &pin)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn profile_unlock(
+    profile_id: String,
+    pin: String,
+) -> Result<session::SessionInfo, CafError> {
+    run_guarded("profile_unlock", move || {
+        session::profile_unlock(&profile_id, &pin)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn profile_lock() -> Result<(), CafError> {
+    run_guarded("profile_lock", session::profile_lock).await
+}
+
+#[tauri::command]
+pub async fn session_info() -> Result<session::SessionInfo, CafError> {
+    run_guarded("session_info", session::session_info).await
+}
+
+// RBAC commands
+#[tauri::command]
+pub async fn list_roles() -> Result<Vec<rbac::RoleRecord>, CafError> {
+    run_guarded("list_roles", rbac::list_roles).await
+}
+
+#[tauri::command]
+pub async fn save_role(input: rbac::RoleInput) -> Result<rbac::RoleRecord, CafError> {
+    run_guarded("save_role", move || {
+        let caller_id = session::current_profile_id()?;
+        let key = input.key.clone();
+        if let Some(_existing) = rbac::get_role(&key)? {
+            rbac::update_role(&key, input, &caller_id)
+        } else {
+            rbac::create_role(input, &caller_id)
+        }
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn delete_role(key: String) -> Result<(), CafError> {
+    run_guarded("delete_role", move || {
+        let caller_id = session::current_profile_id()?;
+        rbac::delete_role(&key, &caller_id)
+    })
+    .await
 }
 
 // Notes sample commands (Vertical slice)
 #[tauri::command]
-pub async fn list_notes(
-    caller_profile_id: String,
-    is_owner: bool,
-) -> Result<Vec<notes::NoteRecord>, CafError> {
-    run_blocking(move || notes::list_notes(&caller_profile_id, is_owner)).await
+pub async fn list_notes() -> Result<Vec<notes::NoteRecord>, CafError> {
+    run_guarded("list_notes", notes::list_notes).await
 }
 
 #[tauri::command]
-pub async fn save_note(
-    input: notes::NoteInput,
-    caller_profile_id: String,
-) -> Result<notes::NoteRecord, CafError> {
-    run_blocking(move || notes::save_note(input, &caller_profile_id)).await
+pub async fn save_note(input: notes::NoteInput) -> Result<notes::NoteRecord, CafError> {
+    run_guarded("save_note", move || notes::save_note(input)).await
 }
 
 #[tauri::command]
-pub async fn delete_note(id: String, caller_profile_id: String) -> Result<(), CafError> {
-    run_blocking(move || notes::delete_note(&id, &caller_profile_id)).await
+pub async fn delete_note(id: String) -> Result<(), CafError> {
+    run_guarded("delete_note", move || notes::delete_note(&id)).await
+}
+
+#[tauri::command]
+pub async fn get_notes_summary() -> Result<Vec<caf_core::visibility::OwnerSummary>, CafError> {
+    run_guarded("get_notes_summary", notes::get_notes_summary).await
 }
 
 // AI commands
 #[tauri::command]
 pub async fn get_ai_settings() -> Result<ai::AiSettings, CafError> {
-    run_blocking(ai::get_settings).await
+    run_guarded("get_ai_settings", ai::get_settings).await
 }
 
 #[tauri::command]
 pub async fn save_ai_settings(settings: ai::AiSettings) -> Result<(), CafError> {
-    run_blocking(move || ai::save_settings(&settings)).await
+    run_guarded("save_ai_settings", move || ai::save_settings(&settings)).await
 }
 
 #[tauri::command]
 pub async fn set_ai_api_key(api_key: String) -> Result<(), CafError> {
-    run_blocking(move || ai::set_ai_api_key(&api_key)).await
+    run_guarded("set_ai_api_key", move || ai::set_ai_api_key(&api_key)).await
 }
 
 #[tauri::command]
 pub async fn clear_ai_api_key() -> Result<(), CafError> {
-    run_blocking(ai::clear_ai_api_key).await
+    run_guarded("clear_ai_api_key", ai::clear_ai_api_key).await
 }
 
 #[tauri::command]
 pub async fn ai_preview_context(level: ai::PrivacyLevel) -> Result<ai::ContextPayload, CafError> {
-    run_blocking(move || ai::preview_context_for_current_session(level)).await
+    run_guarded("ai_preview_context", move || {
+        ai::preview_context_for_current_session(level)
+    })
+    .await
 }
 
 #[tauri::command]
@@ -155,9 +240,8 @@ pub async fn ai_chat(
     privacy_level: Option<ai::PrivacyLevel>,
     consent_given: Option<bool>,
 ) -> Result<ai::AiChatResponse, CafError> {
-    run_blocking(move || {
-        let session = caf_core::session::get_current_session()
-            .unwrap_or_else(|_| caf_core::session::Session::new("default", "member"));
+    run_guarded("ai_chat", move || {
+        let session = caf_core::session::get_current_session()?;
         ai::chat(
             &session,
             &prompt,
@@ -170,47 +254,50 @@ pub async fn ai_chat(
 
 #[tauri::command]
 pub async fn ai_get_providers() -> Result<Vec<ai::AiProviderSummary>, CafError> {
-    run_blocking(ai::get_all_providers).await
+    run_guarded("ai_get_providers", ai::get_all_providers).await
 }
 
 #[tauri::command]
 pub async fn ai_save_provider(provider: ai::AiProviderConfig) -> Result<(), CafError> {
-    run_blocking(move || ai::save_ai_provider(provider)).await
+    run_guarded("ai_save_provider", move || ai::save_ai_provider(provider)).await
 }
 
 #[tauri::command]
 pub async fn ai_delete_provider(id: String) -> Result<(), CafError> {
-    run_blocking(move || ai::delete_ai_provider(&id)).await
+    run_guarded("ai_delete_provider", move || ai::delete_ai_provider(&id)).await
 }
 
 #[tauri::command]
 pub async fn ai_get_routing_matrix() -> Result<Vec<ai::TaskRouteRule>, CafError> {
-    run_blocking(ai::get_task_routing_matrix).await
+    run_guarded("ai_get_routing_matrix", ai::get_task_routing_matrix).await
 }
 
 #[tauri::command]
 pub async fn ai_save_routing_rule(rule: ai::TaskRouteRule) -> Result<(), CafError> {
-    run_blocking(move || ai::save_task_routing_rule(rule)).await
+    run_guarded("ai_save_routing_rule", move || {
+        ai::save_task_routing_rule(rule)
+    })
+    .await
 }
 
 #[tauri::command]
 pub async fn ai_get_personas() -> Result<Vec<ai::SystemPersona>, CafError> {
-    run_blocking(ai::get_user_personas).await
+    run_guarded("ai_get_personas", ai::get_user_personas).await
 }
 
 #[tauri::command]
 pub async fn ai_save_persona(persona: ai::SystemPersona) -> Result<(), CafError> {
-    run_blocking(move || ai::save_user_persona(persona)).await
+    run_guarded("ai_save_persona", move || ai::save_user_persona(persona)).await
 }
 
 #[tauri::command]
 pub async fn ai_delete_persona(id: String) -> Result<(), CafError> {
-    run_blocking(move || ai::delete_user_persona(&id)).await
+    run_guarded("ai_delete_persona", move || ai::delete_user_persona(&id)).await
 }
 
 #[tauri::command]
 pub async fn ai_get_habits() -> Result<Vec<ai::HabitFact>, CafError> {
-    run_blocking(ai::get_habit_memories).await
+    run_guarded("ai_get_habits", ai::get_habit_memories).await
 }
 
 #[tauri::command]
@@ -218,32 +305,38 @@ pub async fn ai_search_habits(
     query: String,
     limit: Option<usize>,
 ) -> Result<Vec<ai::HabitFact>, CafError> {
-    run_blocking(move || ai::search_habit_memories(&query, limit.unwrap_or(20))).await
+    run_guarded("ai_search_habits", move || {
+        ai::search_habit_memories(&query, limit.unwrap_or(20))
+    })
+    .await
 }
 
 #[tauri::command]
 pub async fn ai_toggle_habit_pin(id: String) -> Result<bool, CafError> {
-    run_blocking(move || ai::toggle_habit_pin_status(&id)).await
+    run_guarded("ai_toggle_habit_pin", move || {
+        ai::toggle_habit_pin_status(&id)
+    })
+    .await
 }
 
 #[tauri::command]
 pub async fn ai_delete_habit(id: String) -> Result<(), CafError> {
-    run_blocking(move || ai::delete_habit_memory(&id)).await
+    run_guarded("ai_delete_habit", move || ai::delete_habit_memory(&id)).await
 }
 
 #[tauri::command]
 pub async fn ai_get_skills() -> Result<Vec<ai::CustomSkill>, CafError> {
-    run_blocking(ai::get_all_skills).await
+    run_guarded("ai_get_skills", ai::get_all_skills).await
 }
 
 #[tauri::command]
 pub async fn ai_save_skill(skill: ai::CustomSkill) -> Result<(), CafError> {
-    run_blocking(move || ai::save_custom_skill(skill)).await
+    run_guarded("ai_save_skill", move || ai::save_custom_skill(skill)).await
 }
 
 #[tauri::command]
 pub async fn ai_delete_skill(id: String) -> Result<(), CafError> {
-    run_blocking(move || ai::delete_custom_skill(&id)).await
+    run_guarded("ai_delete_skill", move || ai::delete_custom_skill(&id)).await
 }
 
 #[tauri::command]
@@ -252,8 +345,11 @@ pub async fn ai_dispatch_task(
     query: String,
     terminal_ctx: Option<ai::TerminalContext>,
 ) -> Result<ai::DispatchResult, CafError> {
-    let tt = ai::TaskType::from_str_opt(&task_type).unwrap_or(ai::TaskType::Chat);
-    run_blocking(move || ai::dispatch_task(tt, &query, terminal_ctx)).await
+    run_guarded("ai_dispatch_task", move || {
+        let tt = ai::TaskType::from_str_opt(&task_type).unwrap_or(ai::TaskType::Chat);
+        ai::dispatch_task(tt, &query, terminal_ctx)
+    })
+    .await
 }
 
 #[tauri::command]
@@ -263,8 +359,11 @@ pub async fn ai_dispatch_task_with_skill(
     skill_name: Option<String>,
     terminal_ctx: Option<ai::TerminalContext>,
 ) -> Result<ai::DispatchResult, CafError> {
-    let tt = ai::TaskType::from_str_opt(&task_type).unwrap_or(ai::TaskType::Chat);
-    run_blocking(move || ai::dispatch_task_with_skill(tt, &query, skill_name, terminal_ctx)).await
+    run_guarded("ai_dispatch_task_with_skill", move || {
+        let tt = ai::TaskType::from_str_opt(&task_type).unwrap_or(ai::TaskType::Chat);
+        ai::dispatch_task_with_skill(tt, &query, skill_name, terminal_ctx)
+    })
+    .await
 }
 
 // Feedback & Crash commands
@@ -275,7 +374,7 @@ pub async fn submit_feedback(
     name: Option<String>,
     profession: Option<String>,
 ) -> Result<(), CafError> {
-    run_blocking(move || {
+    run_guarded("submit_feedback", move || {
         feedback::submit_feedback(rating, &content, name.as_deref(), profession.as_deref())
     })
     .await
@@ -283,32 +382,44 @@ pub async fn submit_feedback(
 
 #[tauri::command]
 pub async fn get_pending_crash_report() -> Result<Option<crash::ScrubbedCrashReport>, CafError> {
-    run_blocking(crash::pending_crash_report).await
+    run_guarded("get_pending_crash_report", crash::pending_crash_report).await
 }
 
 #[tauri::command]
 pub async fn dismiss_crash_report(id: String, never_again: Option<bool>) -> Result<(), CafError> {
-    run_blocking(move || crash::dismiss_crash_report(&id, never_again.unwrap_or(false))).await
+    run_guarded("dismiss_crash_report", move || {
+        crash::dismiss_crash_report(&id, never_again.unwrap_or(false))
+    })
+    .await
 }
 
 // Backup commands
 #[tauri::command]
 pub async fn export_encrypted_backup(password: String) -> Result<Vec<u8>, CafError> {
-    run_blocking(move || backup::export_backup(&password)).await
+    run_guarded("export_encrypted_backup", move || {
+        backup::export_backup(&password)
+    })
+    .await
 }
 
 #[tauri::command]
 pub async fn import_encrypted_backup(data: Vec<u8>, password: String) -> Result<(), CafError> {
-    run_blocking(move || backup::import_backup(&data, &password)).await
+    run_guarded("import_encrypted_backup", move || {
+        backup::import_backup(&data, &password)
+    })
+    .await
 }
 
 // Performance & Preferences
 #[tauri::command]
 pub async fn get_performance_prefs() -> Result<prefs::PerformancePrefs, CafError> {
-    run_blocking(prefs::load_performance_prefs).await
+    run_guarded("get_performance_prefs", prefs::load_performance_prefs).await
 }
 
 #[tauri::command]
 pub async fn set_performance_prefs(prefs: prefs::PerformancePrefs) -> Result<(), CafError> {
-    run_blocking(move || prefs::save_performance_prefs(&prefs)).await
+    run_guarded("set_performance_prefs", move || {
+        prefs::save_performance_prefs(&prefs)
+    })
+    .await
 }

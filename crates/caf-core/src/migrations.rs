@@ -18,6 +18,11 @@ pub const FRAMEWORK_MIGRATIONS: &[(i32, &str, &str)] = &[
         "0002_ai_routing_and_memory",
         include_str!("migrations/0002_ai_routing_and_memory.sql"),
     ),
+    (
+        3,
+        "0003_rbac_and_audit",
+        include_str!("migrations/0003_rbac_and_audit.sql"),
+    ),
 ];
 
 fn compute_checksum(sql: &str) -> String {
@@ -201,7 +206,7 @@ mod tests {
         let cv: i32 = conn
             .query_row("SELECT MAX(version) FROM schema_version", [], |r| r.get(0))
             .expect("query max version");
-        assert_eq!(cv, 2);
+        assert_eq!(cv, FRAMEWORK_MIGRATIONS.len() as i32);
 
         let _ = std::fs::remove_dir_all(&temp_dir);
     }

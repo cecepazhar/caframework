@@ -23,7 +23,7 @@ pub fn export_backup(passphrase: &str) -> Result<Vec<u8>, CafError> {
     }
 
     let profiles = profiles::list_profiles()?;
-    let notes = notes::list_notes("backup-root", true)?;
+    let notes = notes::list_notes_internal("backup-root", true)?;
 
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -74,31 +74,29 @@ pub fn import_backup(data: &[u8], passphrase: &str) -> Result<(), CafError> {
     let payload: VaultBackupPayload = serde_json::from_slice(&decrypted)
         .map_err(|e| CafError::Vault(VaultError::Generic(format!("Corrupt backup: {e}"))))?;
 
+    let _ = crate::session::set_current_session(crate::session::Session::new(
+        "import-root",
+        "super_admin",
+    ));
+
     for p in payload.profiles {
-        let _ = profiles::save_profile(
-            profiles::ProfileInput {
-                id: Some(p.id),
-                name: p.name,
-                role: p.role,
-                avatar: p.avatar,
-                pin: None,
-            },
-            "import-root",
-        );
+        let _ = profiles::save_profile(profiles::ProfileInput {
+            id: Some(p.id),
+            name: p.name,
+            role: p.role,
+            avatar: p.avatar,
+            pin: None,
+        });
     }
 
     for n in payload.notes {
-        let _ = notes::save_note(
-            notes::NoteInput {
-                id: Some(n.id.clone()),
-                title: n.title,
-                content: n.content,
-                tags: n.tags,
-                visibility: Some(n.visibility),
-                owner_profile_id: n.owner_profile_id.clone(),
-            },
-            &n.owner_profile_id,
-        );
+        let _ = notes::save_note(notes::NoteInput {
+            id: Some(n.id.clone()),
+            title: n.title,
+            content: n.content,
+            tags: n.tags,
+            visibility: Some(n.visibility),
+        });
     }
 
     Ok(())

@@ -22,19 +22,31 @@ impl ContextProvider for NotesContextProvider {
             .prepare(&query)
             .map_err(|e| CafError::Db(crate::error::DbError::Generic(e.to_string())))?;
 
-        let rows = stmt
-            .query_map([], |row| {
-                let title: String = row.get(0)?;
-                let content: String = row.get(1)?;
-                Ok(format!("Title: {}\nContent: {}\n", title, content))
-            })
-            .map_err(|e| CafError::Db(crate::error::DbError::Generic(e.to_string())))?;
+        let map_fn = |row: &rusqlite::Row| {
+            let title: String = row.get(0)?;
+            let content: String = row.get(1)?;
+            Ok(format!("Title: {}\nContent: {}\n", title, content))
+        };
 
         let mut context = String::new();
-        for row in rows {
-            let entry =
-                row.map_err(|e| CafError::Db(crate::error::DbError::Generic(e.to_string())))?;
-            context.push_str(&entry);
+        if scope.is_super {
+            let rows = stmt
+                .query_map([], map_fn)
+                .map_err(|e| CafError::Db(crate::error::DbError::Generic(e.to_string())))?;
+            for row in rows {
+                let entry =
+                    row.map_err(|e| CafError::Db(crate::error::DbError::Generic(e.to_string())))?;
+                context.push_str(&entry);
+            }
+        } else {
+            let rows = stmt
+                .query_map([&scope.actor_profile_id], map_fn)
+                .map_err(|e| CafError::Db(crate::error::DbError::Generic(e.to_string())))?;
+            for row in rows {
+                let entry =
+                    row.map_err(|e| CafError::Db(crate::error::DbError::Generic(e.to_string())))?;
+                context.push_str(&entry);
+            }
         }
 
         if scope.is_super {

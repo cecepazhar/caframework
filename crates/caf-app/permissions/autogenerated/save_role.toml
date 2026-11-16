@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-save-role"
+description = "Enables the save_role command without any pre-configured scope."
+commands.allow = ["save_role"]
+
+[[permission]]
+identifier = "deny-save-role"
+description = "Denies the save_role command without any pre-configured scope."
+commands.deny = ["save_role"]
