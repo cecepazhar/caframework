@@ -511,7 +511,12 @@ fn check_ledger(failures: &mut Vec<String>) -> Result<(), Box<dyn std::error::Er
         PathBuf::from(dir)
     } else {
         let home = env::var("HOME").unwrap_or_else(|_| ".".into());
-        PathBuf::from(home).join("Notes/notes/4 - Product/1 CAFramework")
+        let p_notes = PathBuf::from(&home).join("Notes/notes/4 - Product (Notes)/1 CAFramework");
+        if p_notes.exists() {
+            p_notes
+        } else {
+            PathBuf::from(home).join("Notes/notes/4 - Product/1 CAFramework")
+        }
     };
 
     if !plan_dir.exists() {
