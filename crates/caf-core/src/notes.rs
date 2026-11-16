@@ -138,32 +138,12 @@ pub fn save_note(input: NoteInput, caller_profile_id: &str) -> Result<NoteRecord
         (new_id, rev, now.clone(), "create")
     };
 
-    // Append to change_log in the exact same transaction
-    let payload = serde_json::json!({
-        "id": id,
-        "title": input.title,
-        "content": input.content,
-        "tags": input.tags,
-        "visibility": visibility,
-    })
-    .to_string();
-
-    tx.execute(
-        "INSERT INTO change_log (entity_type, entity_id, rev, action, payload, origin_device_id, owner_profile_id, visibility, timestamp)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
-        rusqlite::params![
-            "note",
-            id,
-            rev,
-            action,
-            payload,
-            device_id,
-            caller_profile_id,
-            visibility,
-            now
-        ],
-    )
-    .map_err(|e| CafError::Db(DbError::Generic(e.to_string())))?;
+    // Append to change_log in the exact same transaction via central sync helper
+    if action == "create" {
+        crate::sync::insert(&tx, "notes", &id, caller_profile_id, &device_id)?;
+    } else {
+        crate::sync::update(&tx, "notes", &id, rev, caller_profile_id, &device_id)?;
+    }
 
     tx.commit()
         .map_err(|e| CafError::Db(DbError::Generic(e.to_string())))?;
@@ -192,7 +172,7 @@ pub fn delete_note(id: &str, caller_profile_id: &str) -> Result<(), CafError> {
     let now = Utc::now().to_rfc3339();
     let device_id = crate::paths::device_id().unwrap_or_else(|_| "device-local".into());
 
-    let (rev, visibility): (i64, String) = tx
+    let (rev, _visibility): (i64, String) = tx
         .query_row(
             "SELECT rev, visibility FROM notes WHERE id = ?1 AND deleted_at IS NULL",
             [id],
@@ -207,22 +187,7 @@ pub fn delete_note(id: &str, caller_profile_id: &str) -> Result<(), CafError> {
     )
     .map_err(|e| CafError::Db(DbError::Generic(e.to_string())))?;
 
-    tx.execute(
-        "INSERT INTO change_log (entity_type, entity_id, rev, action, payload, origin_device_id, owner_profile_id, visibility, timestamp)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
-        rusqlite::params![
-            "note",
-            id,
-            new_rev,
-            "delete",
-            "{}",
-            device_id,
-            caller_profile_id,
-            visibility,
-            now
-        ],
-    )
-    .map_err(|e| CafError::Db(DbError::Generic(e.to_string())))?;
+    crate::sync::soft_delete(&tx, "notes", id, new_rev, caller_profile_id, &device_id)?;
 
     tx.commit()
         .map_err(|e| CafError::Db(DbError::Generic(e.to_string())))?;

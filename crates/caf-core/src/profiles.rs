@@ -110,7 +110,7 @@ pub fn save_profile(
         None
     };
 
-    let (id, rev, created_at, final_pin_hash, _action) = if let Some(existing_id) = input.id {
+    let (id, rev, created_at, final_pin_hash, action) = if let Some(existing_id) = input.id {
         let existing: (i64, String, Option<String>) = tx
             .query_row(
                 "SELECT rev, created_at, pin_hash FROM profiles WHERE id = ?1 AND deleted_at IS NULL",
@@ -152,6 +152,12 @@ pub fn save_profile(
 
         (new_id, rev, now.clone(), pin_hash, "create")
     };
+
+    if action == "create" {
+        crate::sync::insert(&tx, "profiles", &id, caller_profile_id, &device_id)?;
+    } else {
+        crate::sync::update(&tx, "profiles", &id, rev, caller_profile_id, &device_id)?;
+    }
 
     tx.commit()
         .map_err(|e| CafError::Db(DbError::Generic(e.to_string())))?;
@@ -268,6 +274,7 @@ pub fn get_profile(id: &str) -> Result<Option<ProfileRecord>, CafError> {
 }
 
 pub fn delete_profile(id: &str, caller_profile_id: &str) -> Result<(), CafError> {
+    let device_id = crate::paths::device_id()?;
     let mut conn = db::open()?;
     let tx = conn
         .transaction()
@@ -279,6 +286,8 @@ pub fn delete_profile(id: &str, caller_profile_id: &str) -> Result<(), CafError>
         rusqlite::params![now, id],
     )
     .map_err(|e| CafError::Db(DbError::Generic(e.to_string())))?;
+
+    crate::sync::soft_delete(&tx, "profiles", id, 1, caller_profile_id, &device_id)?;
 
     tx.commit()
         .map_err(|e| CafError::Db(DbError::Generic(e.to_string())))?;

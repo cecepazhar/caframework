@@ -135,6 +135,27 @@ pub fn crash_dumps_dir(data_dir: &Path) -> PathBuf {
 }
 
 pub fn device_id() -> Result<String, CafError> {
+    // If vault is open, store and load from app_kv inside the vault (P04.5)
+    if let Ok(conn) = crate::db::open() {
+        let existing: Result<String, _> = conn.query_row(
+            "SELECT value FROM app_kv WHERE key = 'origin_device_id'",
+            [],
+            |r| r.get(0),
+        );
+        if let Ok(id) = existing
+            && !id.trim().is_empty()
+        {
+            return Ok(id);
+        }
+
+        let new_id = uuid::Uuid::new_v4().to_string();
+        let _ = conn.execute(
+            "INSERT OR REPLACE INTO app_kv (key, value) VALUES ('origin_device_id', ?1)",
+            [&new_id],
+        );
+        return Ok(new_id);
+    }
+
     let dir = data_dir()?;
     let id_file = dir.join("device_id.txt");
     if id_file.is_file() {
