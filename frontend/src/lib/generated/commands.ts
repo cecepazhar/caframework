@@ -73,6 +73,19 @@ export interface PerformancePrefs {
   enable_smooth_scrolling: boolean;
 }
 
+// Session & RBAC commands
+export async function cmdProfileUnlock(args: { profileId: string; pin: string }): Promise<any> {
+  return await invoke('profile_unlock', args);
+}
+
+export async function cmdProfileLock(): Promise<void> {
+  return await invoke<void>('profile_lock');
+}
+
+export async function cmdSessionInfo(): Promise<any> {
+  return await invoke('session_info');
+}
+
 // Window commands
 export async function cmdWindowMinimize(): Promise<void> {
   return await invoke('window_minimize');
@@ -199,5 +212,75 @@ export async function cmdGetPerformancePrefs(): Promise<PerformancePrefs> {
 
 export async function cmdSetPerformancePrefs(args: { prefs: PerformancePrefs }): Promise<void> {
   return await invoke<void>('set_performance_prefs', args);
+}
+
+// Pro & Licensing commands (P11)
+export async function cmdProStatus(): Promise<any> {
+  return await invoke('pro_status');
+}
+
+export async function cmdProServerAvailable(): Promise<boolean> {
+  return await invoke<boolean>('pro_server_available');
+}
+
+export async function cmdProRegister(args: { email: string; password: string; name: string; locale: string }): Promise<void> {
+  return await invoke<void>('pro_register', args);
+}
+
+export async function cmdProResendVerification(args: { email: string }): Promise<void> {
+  return await invoke<void>('pro_resend_verification', args);
+}
+
+export async function cmdProForgotPassword(args: { email: string; locale: string }): Promise<void> {
+  return await invoke<void>('pro_forgot_password', args);
+}
+
+export async function cmdProLogin(args: { email: string; password: string }): Promise<any> {
+  return await invoke('pro_login', args);
+}
+
+export async function cmdProStartTrial(): Promise<any> {
+  return await invoke('pro_start_trial');
+}
+
+export async function cmdProAccount(): Promise<any> {
+  return await invoke('pro_account');
+}
+
+export async function cmdProRevokeDevice(args: { deviceId: string }): Promise<void> {
+  return await invoke<void>('pro_revoke_device', args);
+}
+
+export async function cmdProLogout(): Promise<void> {
+  return await invoke<void>('pro_logout');
+}
+
+// Billing commands (P11)
+export async function cmdBillingGetEffectiveState(): Promise<any> {
+  return await invoke('billing_get_effective_state');
+}
+
+export async function cmdBillingRequestOtp(args: { email: string }): Promise<void> {
+  return await invoke<void>('billing_request_otp', args);
+}
+
+export async function cmdBillingVerifyOtp(args: { email: string; otpCode: string }): Promise<void> {
+  return await invoke<void>('billing_verify_otp', args);
+}
+
+export async function cmdBillingActivateLicense(args: { licenseKey: string }): Promise<void> {
+  return await invoke<void>('billing_activate_license', args);
+}
+
+export async function cmdBillingCreateCheckout(args: { planId: string }): Promise<any> {
+  return await invoke('billing_create_checkout', args);
+}
+
+export async function cmdBillingPollCheckout(args: { checkoutId: string }): Promise<string> {
+  return await invoke<string>('billing_poll_checkout', args);
+}
+
+export async function cmdBillingSignOut(): Promise<void> {
+  return await invoke<void>('billing_sign_out');
 }
 

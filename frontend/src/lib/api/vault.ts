@@ -3,10 +3,20 @@ import {
   cmdValidateVaultPassword,
   cmdLockVault,
   cmdChangeMasterPassword,
-  cmdResetVault
+  cmdResetVault,
+  cmdSessionInfo
 } from '$lib/generated/commands';
 
 export const MIN_VAULT_PASSWORD_LEN = 8;
+
+export async function isVaultUnlocked(): Promise<boolean> {
+  try {
+    const session = await cmdSessionInfo();
+    return !!session;
+  } catch {
+    return false;
+  }
+}
 
 export function validateVaultPassword(password: string): Promise<boolean> {
   return cmdValidateVaultPassword({ password });

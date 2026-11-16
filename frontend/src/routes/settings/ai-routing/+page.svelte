@@ -3,6 +3,7 @@
   import PageHeader from '$lib/components/PageHeader.svelte';
   import AiNavTabs from '$lib/components/AiNavTabs.svelte';
   import { showToast, confirmModal } from '$lib/stores/uiNotifications.svelte';
+  import { errorText } from '$lib/errors';
   import {
     type AiProvider,
     type AiProviderConfig,
@@ -76,7 +77,7 @@
       routingRules = matrix;
       personas = pers;
     } catch (err) {
-      showToast('Failed to load AI Routing data: ' + String(err), 'error');
+      showToast('Failed to load AI Routing data: ' + errorText(err), 'error');
     } finally {
       loading = false;
     }
@@ -145,7 +146,7 @@
       showProviderModal = false;
       await loadData();
     } catch (err) {
-      showToast('Failed to save provider: ' + String(err), 'error');
+      showToast('Failed to save provider: ' + errorText(err), 'error');
     } finally {
       savingProvider = false;
     }
@@ -165,7 +166,7 @@
       showToast(`Provider "${p.name}" deleted.`, 'success');
       await loadData();
     } catch (err) {
-      showToast('Failed to delete provider: ' + String(err), 'error');
+      showToast('Failed to delete provider: ' + errorText(err), 'error');
     }
   }
 
@@ -174,7 +175,7 @@
       await aiSaveRoutingRule(rule);
       showToast(`Routing rule for "${rule.task_type}" updated.`, 'success');
     } catch (err) {
-      showToast('Failed to save routing rule: ' + String(err), 'error');
+      showToast('Failed to save routing rule: ' + errorText(err), 'error');
     }
   }
 </script>

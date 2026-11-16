@@ -3,6 +3,7 @@
   import PageHeader from '$lib/components/PageHeader.svelte';
   import AiNavTabs from '$lib/components/AiNavTabs.svelte';
   import { showToast, confirmModal } from '$lib/stores/uiNotifications.svelte';
+  import { errorText } from '$lib/errors';
   import {
     type HabitFact,
     aiGetHabits,
@@ -28,7 +29,7 @@
     try {
       habits = await aiGetHabits();
     } catch (err) {
-      showToast('Failed to load habit memories: ' + String(err), 'error');
+      showToast('Failed to load habit memories: ' + errorText(err), 'error');
     } finally {
       loading = false;
     }
@@ -48,7 +49,7 @@
     try {
       habits = await aiSearchHabits(q, 50);
     } catch (err) {
-      showToast('Habit search failed: ' + String(err), 'error');
+      showToast('Habit search failed: ' + errorText(err), 'error');
     } finally {
       searching = false;
     }
@@ -60,7 +61,7 @@
       h.is_pinned = isPinned;
       showToast(isPinned ? `Pinned "${h.key_tag}" to priority memory.` : `Unpinned "${h.key_tag}".`, 'info');
     } catch (err) {
-      showToast('Failed to toggle pin: ' + String(err), 'error');
+      showToast('Failed to toggle pin: ' + errorText(err), 'error');
     }
   }
 
@@ -72,7 +73,7 @@
       habits = habits.filter((item) => item.id !== h.id);
       showToast('Habit memory deleted.', 'success');
     } catch (err) {
-      showToast('Failed to delete habit: ' + String(err), 'error');
+      showToast('Failed to delete habit: ' + errorText(err), 'error');
     }
   }
 </script>

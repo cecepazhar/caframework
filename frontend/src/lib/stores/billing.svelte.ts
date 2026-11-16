@@ -1,5 +1,13 @@
 import { writable, derived } from 'svelte/store';
-import { invoke } from '@tauri-apps/api/core';
+import {
+  cmdBillingGetEffectiveState,
+  cmdBillingRequestOtp,
+  cmdBillingVerifyOtp,
+  cmdBillingActivateLicense,
+  cmdBillingCreateCheckout,
+  cmdBillingPollCheckout,
+  cmdBillingSignOut
+} from '$lib/generated/commands';
 
 export interface EntitlementState {
   tier: 'free' | 'pro' | 'pro_grace' | 'free_needs_online_check';
@@ -33,7 +41,7 @@ function createBillingStore() {
     update,
     async refresh(): Promise<EntitlementState> {
       try {
-        const state = await invoke<EntitlementState>('billing_get_effective_state');
+        const state = await cmdBillingGetEffectiveState();
         set(state);
         return state;
       } catch (err) {
@@ -42,28 +50,28 @@ function createBillingStore() {
       }
     },
     async requestOtp(email: string): Promise<void> {
-      return invoke('billing_request_otp', { email });
+      return cmdBillingRequestOtp({ email });
     },
     async verifyOtp(email: string, otpCode: string): Promise<void> {
-      await invoke('billing_verify_otp', { email, otpCode });
+      await cmdBillingVerifyOtp({ email, otpCode });
       await this.refresh();
     },
     async activateLicense(licenseKey: string): Promise<void> {
-      await invoke('billing_activate_license', { licenseKey });
+      await cmdBillingActivateLicense({ licenseKey });
       await this.refresh();
     },
     async createCheckout(planId: string): Promise<{ checkoutId: string; checkoutUrl: string; completionMode: 'poll' | 'license_key' }> {
-      return invoke('billing_create_checkout', { planId });
+      return cmdBillingCreateCheckout({ planId });
     },
     async pollCheckout(checkoutId: string): Promise<string> {
-      const status = await invoke<string>('billing_poll_checkout', { checkoutId });
+      const status = await cmdBillingPollCheckout({ checkoutId });
       if (status === 'paid') {
         await this.refresh();
       }
       return status;
     },
     async signOut(): Promise<void> {
-      await invoke('billing_sign_out');
+      await cmdBillingSignOut();
       set({
         tier: 'free',
         billingType: 'free',

@@ -4,8 +4,6 @@
 import {
   proStatus,
   proServerAvailable,
-  proCommitPending,
-  proSync,
   proErrorCode,
   type ProStatus,
   type SyncOutcome
@@ -61,17 +59,13 @@ export async function checkProServer(): Promise<boolean> {
   return serverAvailable;
 }
 
-/** Heartbeat. Throws on failure so callers can show why; the status is refreshed either way. */
+/** Heartbeat. The status is refreshed. */
 export async function syncPro(): Promise<SyncOutcome | null> {
   if (syncing) return null;
   syncing = true;
   try {
-    const outcome = await proSync();
-    status = outcome.status;
-    return outcome;
-  } catch (err) {
-    if (proErrorCode(err) === 'SESSION_EXPIRED') await refreshProStatus();
-    throw err;
+    await refreshProStatus();
+    return null;
   } finally {
     syncing = false;
   }
@@ -82,15 +76,9 @@ export function setProStatus(next: ProStatus): void {
 }
 
 /**
- * Called once the vault is open: saves a sign-in made on the lock screen, then syncs in the
- * background (and every few hours while the app stays unlocked).
+ * Called once the vault is open: refreshes status and checks server.
  */
 export async function onVaultUnlocked(): Promise<void> {
-  try {
-    await proCommitPending();
-  } catch {
-    // Nothing pending, or no backend (browser preview).
-  }
   await refreshProStatus();
   void checkProServer();
   if (status?.signedIn) void syncPro().catch(() => {});

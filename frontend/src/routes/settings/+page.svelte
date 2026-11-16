@@ -21,7 +21,6 @@
   import { getPro, refreshProStatus, checkProServer, syncPro, setProStatus } from '$lib/stores/pro.svelte';
   import { proStartTrial, proAccount, proRevokeDevice, proLogout, type ProDevice, type DeviceLimit, type SyncOutcome } from '$lib/api/pro';
   import { proErrorMessage } from '$lib/pro/errors';
-  import ProTeamPanel from '$lib/components/ProTeamPanel.svelte';
   import { SHORTCUT_GROUPS } from '$lib/shortcuts';
   import PageHeader from '$lib/components/PageHeader.svelte';
   import AmbientSettingsCard from '$lib/components/AmbientSettingsCard.svelte';
@@ -603,10 +602,6 @@
           {/if}
         {/if}
       </div>
-
-      {#if pro.status?.signedIn && !pro.status.pending}
-        <ProTeamPanel onOutcome={handleOutcome} />
-      {/if}
 
       {#if pro.isPro}
         <!-- Active Pro / Lifetime Billing Overview (No need to show upgrade pricing cards) -->

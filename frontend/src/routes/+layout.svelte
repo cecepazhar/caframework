@@ -13,10 +13,10 @@
   import ProfileMenu from '$lib/components/ProfileMenu.svelte';
   import { getFeedbackPromptState } from '$lib/stores/feedbackStore.svelte';
   import { checkForUpdates } from '$lib/stores/updater.svelte';
-  import { lockVault } from '$lib/api/vault';
+  import { lockVault, isVaultUnlocked as checkVaultUnlocked } from '$lib/api/vault';
   import { APP_VERSION, APP_NAME } from '$lib/appInfo';
   import { onMount } from 'svelte';
-  import { invoke } from '@tauri-apps/api/core';
+  import { cmdWindowStartDragging, cmdWindowMaximize } from '$lib/generated/commands';
   import { t } from '$lib/i18n/index.svelte';
   import HeaderQuickControls from '$lib/components/HeaderQuickControls.svelte';
   import WindowControls from '$lib/components/WindowControls.svelte';
@@ -76,7 +76,7 @@
 
   onMount(() => {
     initTheme();
-    invoke<boolean>('is_vault_unlocked')
+    checkVaultUnlocked()
       .then((unlocked) => {
         isVaultUnlocked = unlocked;
       })
@@ -111,11 +111,11 @@
     if (target?.closest('button, input, textarea, a, select, [role="button"], .no-drag')) {
       return;
     }
-    invoke('window_start_dragging').catch(() => {});
+    cmdWindowStartDragging().catch(() => {});
   }
 
   function maximizeWindow() {
-    invoke('window_maximize').catch(() => {});
+    cmdWindowMaximize().catch(() => {});
   }
 
   let { children } = $props();

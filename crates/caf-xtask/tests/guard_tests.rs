@@ -191,3 +191,44 @@ fn test_ledger_guard_fails_on_tamper() {
         "Must detect missing evidence anchor/file: {stderr}"
     );
 }
+
+#[test]
+fn test_invoke_guard_fails_on_fixture() {
+    let temp_root =
+        std::env::temp_dir().join(format!("caf_invoke_guard_test_{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&temp_root);
+    let fe_src = temp_root.join("frontend/src");
+    std::fs::create_dir_all(&fe_src).expect("create temp fixture dir");
+
+    struct Cleanup(PathBuf);
+    impl Drop for Cleanup {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+    let _cleanup = Cleanup(temp_root.clone());
+
+    // Create a non-generated file that calls invoke()
+    let bad_file = fe_src.join("BadComponent.svelte");
+    std::fs::write(&bad_file, "<script>\n  invoke('bad_command');\n</script>")
+        .expect("write bad fixture");
+
+    let output = Command::new(bin_path())
+        .args(["guard", "--only", "invoke_registry"])
+        .env("CAF_GUARD_ROOT", &temp_root)
+        .output()
+        .expect("Failed to run caf-xtask guard");
+
+    assert!(
+        !output.status.success(),
+        "Guard must fail when invoke() is called outside generated bindings"
+    );
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    println!("Invoke guard fixture output:\n{}", stderr);
+
+    assert!(
+        stderr.contains("invoke() is only allowed in generated bindings"),
+        "Must flag forbidden invoke() call in non-generated file: {stderr}"
+    );
+}

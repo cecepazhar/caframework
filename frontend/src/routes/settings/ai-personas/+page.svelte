@@ -3,6 +3,7 @@
   import PageHeader from '$lib/components/PageHeader.svelte';
   import AiNavTabs from '$lib/components/AiNavTabs.svelte';
   import { showToast, confirmModal } from '$lib/stores/uiNotifications.svelte';
+  import { errorText } from '$lib/errors';
   import {
     type SystemPersona,
     aiGetPersonas,
@@ -37,7 +38,7 @@
     try {
       personas = await aiGetPersonas();
     } catch (err) {
-      showToast('Failed to load personas: ' + String(err), 'error');
+      showToast('Failed to load personas: ' + errorText(err), 'error');
     } finally {
       loading = false;
     }
@@ -107,7 +108,7 @@
       showModal = false;
       await loadData();
     } catch (err) {
-      showToast('Failed to save persona: ' + String(err), 'error');
+      showToast('Failed to save persona: ' + errorText(err), 'error');
     } finally {
       saving = false;
     }
@@ -125,7 +126,7 @@
       showToast(`Persona "${p.title}" deleted.`, 'success');
       await loadData();
     } catch (err) {
-      showToast('Failed to delete persona: ' + String(err), 'error');
+      showToast('Failed to delete persona: ' + errorText(err), 'error');
     }
   }
 
@@ -136,7 +137,7 @@
       showToast(`"${p.title}" is now the global default persona.`, 'success');
       await loadData();
     } catch (err) {
-      showToast('Failed to set default persona: ' + String(err), 'error');
+      showToast('Failed to set default persona: ' + errorText(err), 'error');
     }
   }
 </script>

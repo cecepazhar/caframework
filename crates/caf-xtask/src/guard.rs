@@ -63,6 +63,11 @@ pub fn run_guard(only: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
         check_ledger(&mut failures)?;
     }
 
+    // (h) String(err) guard (P06.4)
+    if should_run("string_err", only) {
+        check_string_err(&root, &mut failures)?;
+    }
+
     if !failures.is_empty() {
         for f in &failures {
             eprintln!("{}", f);
@@ -353,7 +358,15 @@ fn check_invoke_registry(
                         if bytes[i] == b'\n' {
                             line_num += 1;
                         }
-                        if bytes[i..].starts_with(b"invoke") {
+                        let is_prev_ident = i > 0
+                            && (bytes[i - 1].is_ascii_alphanumeric()
+                                || bytes[i - 1] == b'_'
+                                || bytes[i - 1] == b'$');
+                        let next_byte = bytes.get(i + 6);
+                        let is_next_ident = next_byte
+                            .is_some_and(|b| b.is_ascii_alphanumeric() || *b == b'_' || *b == b'$');
+
+                        if !is_prev_ident && !is_next_ident && bytes[i..].starts_with(b"invoke") {
                             let candidate_line = line_num;
                             i += 6;
                             while i < bytes.len() && bytes[i].is_ascii_whitespace() {
@@ -376,6 +389,15 @@ fn check_invoke_registry(
                                     line_num += 1;
                                 }
                                 i += 1;
+                            }
+                            if !rel_path.contains("generated")
+                                && !rel_path.contains("test")
+                                && !rel_path.contains("tests")
+                            {
+                                failures.push(format!(
+                                    "invoke_guard: {}:{}: invoke() is only allowed in generated bindings",
+                                    rel_path, candidate_line
+                                ));
                             }
                             if i < bytes.len() && bytes[i] == b'(' {
                                 i += 1;
@@ -625,5 +647,43 @@ fn check_ledger(failures: &mut Vec<String>) -> Result<(), Box<dyn std::error::Er
         }
     }
 
+    Ok(())
+}
+
+fn check_string_err(
+    root: &Path,
+    failures: &mut Vec<String>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let fe_src = root.join("frontend/src");
+    if !fe_src.exists() {
+        return Ok(());
+    }
+    for entry in walkdir::WalkDir::new(&fe_src).into_iter().flatten() {
+        let path = entry.path();
+        if path.is_file() {
+            let rel_path = path
+                .strip_prefix(root)
+                .unwrap_or(path)
+                .to_string_lossy()
+                .to_string();
+            if (rel_path.ends_with(".ts")
+                || rel_path.ends_with(".svelte")
+                || rel_path.ends_with(".js"))
+                && !rel_path.ends_with("errors.ts")
+                && !rel_path.contains("test")
+                && let Ok(content) = fs::read_to_string(path)
+            {
+                for (idx, line) in content.lines().enumerate() {
+                    if line.contains("String(err)") {
+                        failures.push(format!(
+                            "string_err_guard: {}:{}: String(err) is forbidden, use errorText(err) from $lib/errors",
+                            rel_path,
+                            idx + 1
+                        ));
+                    }
+                }
+            }
+        }
+    }
     Ok(())
 }

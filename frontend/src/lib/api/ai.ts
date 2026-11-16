@@ -1,4 +1,9 @@
-import { invoke } from '@tauri-apps/api/core';
+import {
+  cmdGetAiSettings,
+  cmdSaveAiSettings,
+  cmdAiChat,
+  type AiSettings as GeneratedAiSettings
+} from '$lib/generated/commands';
 
 export interface AiPlanStep {
   id?: string;
@@ -14,8 +19,10 @@ export interface AiPlanStep {
 }
 
 export interface AiSettings {
+  enabled?: boolean;
   provider: string;
-  base_url: string;
+  base_url?: string;
+  endpoint?: string | null;
   api_key: string;
   model: string;
 }
@@ -32,21 +39,43 @@ export interface AiChatReply {
 }
 
 export async function getAiSettings(): Promise<AiSettings> {
-  return invoke<AiSettings>('get_ai_settings');
+  const s = await cmdGetAiSettings();
+  if (s && typeof s === 'object' && !('base_url' in s)) {
+    Object.defineProperty(s, 'base_url', {
+      get() {
+        return this.endpoint ?? '';
+      },
+      set(v: string) {
+        this.endpoint = v;
+      },
+      enumerable: false,
+      configurable: true
+    });
+  }
+  return s as any;
 }
 
 export async function saveAiSettings(settings: AiSettings): Promise<void> {
-  return invoke<void>('save_ai_settings', { settings });
+  const s: any = { ...settings };
+  if (s.endpoint === undefined && s.base_url !== undefined) {
+    s.endpoint = s.base_url || null;
+  }
+  if (s.enabled === undefined) {
+    s.enabled = true;
+  }
+  return cmdSaveAiSettings({ settings: s });
 }
 
 export async function aiChat(
   messages: AiChatMessage[],
-  hostLabel?: string,
-  hosted: boolean = false
+  _hostLabel?: string,
+  _hosted: boolean = false
 ): Promise<AiChatReply> {
-  return invoke<AiChatReply>('ai_chat', {
-    messages,
-    hostLabel,
-    hosted
-  });
+  const prompt = messages.map(m => `${m.role}: ${m.content}`).join('\n');
+  const res = await cmdAiChat({ prompt });
+  return {
+    reply: res?.message ?? '',
+    ready: true,
+    steps: []
+  };
 }

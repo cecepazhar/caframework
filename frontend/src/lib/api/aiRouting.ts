@@ -1,4 +1,22 @@
-import { invoke } from '@tauri-apps/api/core';
+import {
+  invoke_aiGetProviders,
+  invoke_aiSaveProvider,
+  invoke_aiDeleteProvider,
+  invoke_aiGetRoutingMatrix,
+  invoke_aiSaveRoutingRule,
+  invoke_aiGetPersonas,
+  invoke_aiSavePersona,
+  invoke_aiDeletePersona,
+  invoke_aiGetHabits,
+  invoke_aiSearchHabits,
+  invoke_aiToggleHabitPin,
+  invoke_aiDeleteHabit,
+  invoke_aiGetSkills,
+  invoke_aiSaveSkill,
+  invoke_aiDeleteSkill,
+  invoke_aiDispatchTask,
+  invoke_aiDispatchTaskWithSkill
+} from './generated_bindings';
 
 export type TaskType =
   | 'chat'
@@ -99,23 +117,23 @@ export interface DispatchResult {
 // ---- Tauri IPC Commands ----
 
 export async function aiGetProviders(): Promise<AiProvider[]> {
-  return invoke<AiProvider[]>('ai_get_providers');
+  return invoke_aiGetProviders();
 }
 
 export async function aiSaveProvider(provider: AiProviderConfig): Promise<void> {
-  return invoke<void>('ai_save_provider', { provider });
+  return invoke_aiSaveProvider(provider);
 }
 
 export async function aiDeleteProvider(id: string): Promise<void> {
-  return invoke<void>('ai_delete_provider', { id });
+  return invoke_aiDeleteProvider(id);
 }
 
 export async function aiGetRoutingMatrix(): Promise<TaskRouteRule[]> {
-  return invoke<TaskRouteRule[]>('ai_get_routing_matrix');
+  return invoke_aiGetRoutingMatrix();
 }
 
 export async function aiSaveRoutingRule(rule: TaskRouteRule): Promise<void> {
-  return invoke<void>('ai_save_routing_rule', { rule });
+  return invoke_aiSaveRoutingRule(rule);
 }
 
 export interface CustomSkill {
@@ -134,31 +152,31 @@ export interface CustomSkill {
 }
 
 export async function aiGetPersonas(): Promise<SystemPersona[]> {
-  return invoke<SystemPersona[]>('ai_get_personas');
+  return invoke_aiGetPersonas();
 }
 
 export async function aiSavePersona(persona: SystemPersona): Promise<void> {
-  return invoke<void>('ai_save_persona', { persona });
+  return invoke_aiSavePersona(persona);
 }
 
 export async function aiDeletePersona(id: string): Promise<void> {
-  return invoke<void>('ai_delete_persona', { id });
+  return invoke_aiDeletePersona(id);
 }
 
 export async function aiGetHabits(): Promise<HabitFact[]> {
-  return invoke<HabitFact[]>('ai_get_habits');
+  return invoke_aiGetHabits();
 }
 
 export async function aiSearchHabits(query: string, limit: number = 20): Promise<HabitFact[]> {
-  return invoke<HabitFact[]>('ai_search_habits', { query, limit });
+  return invoke_aiSearchHabits(query, limit);
 }
 
 export async function aiToggleHabitPin(id: string): Promise<boolean> {
-  return invoke<boolean>('ai_toggle_habit_pin', { id });
+  return invoke_aiToggleHabitPin(id);
 }
 
 export async function aiDeleteHabit(id: string): Promise<void> {
-  return invoke<void>('ai_delete_habit', { id });
+  return invoke_aiDeleteHabit(id);
 }
 
 export async function aiDispatchTask(
@@ -166,25 +184,19 @@ export async function aiDispatchTask(
   query: string,
   terminalCtx?: TerminalContext
 ): Promise<DispatchResult> {
-  return invoke<DispatchResult>('ai_dispatch_task', {
-    taskType,
-    task_type: taskType,
-    query,
-    terminalCtx,
-    terminal_ctx: terminalCtx
-  });
+  return invoke_aiDispatchTask(taskType as string, query, terminalCtx ?? null);
 }
 
 export async function aiGetSkills(): Promise<CustomSkill[]> {
-  return invoke<CustomSkill[]>('ai_get_skills');
+  return invoke_aiGetSkills();
 }
 
 export async function aiSaveSkill(skill: CustomSkill): Promise<void> {
-  return invoke<void>('ai_save_skill', { skill });
+  return invoke_aiSaveSkill(skill);
 }
 
 export async function aiDeleteSkill(id: string): Promise<void> {
-  return invoke<void>('ai_delete_skill', { id });
+  return invoke_aiDeleteSkill(id);
 }
 
 export async function aiDispatchTaskWithSkill(
@@ -193,13 +205,5 @@ export async function aiDispatchTaskWithSkill(
   skillName?: string | null,
   terminalCtx?: TerminalContext
 ): Promise<DispatchResult> {
-  return invoke<DispatchResult>('ai_dispatch_task_with_skill', {
-    taskType,
-    task_type: taskType,
-    query,
-    skillName,
-    skill_name: skillName,
-    terminalCtx,
-    terminal_ctx: terminalCtx
-  });
+  return invoke_aiDispatchTaskWithSkill(taskType as string, query, skillName ?? null, terminalCtx ?? null);
 }

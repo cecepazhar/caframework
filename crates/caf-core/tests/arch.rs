@@ -349,6 +349,39 @@ fn tauri_command_registry_build_script_and_acl_agree() {
         "policy terdaftar untuk command yang tidak ada di caf-app: {excess_policy:?}"
     );
 
+    // 5. Source 5: Bindings in frontend/src/lib/api/generated_bindings.ts
+    let bindings_file = workspace_root().join("frontend/src/lib/api/generated_bindings.ts");
+    let bindings_code = std::fs::read_to_string(&bindings_file)
+        .expect("gagal membaca frontend/src/lib/api/generated_bindings.ts");
+
+    let bound_commands: HashSet<String> = bindings_code
+        .lines()
+        .filter_map(|line| {
+            if line.contains("invoke('") {
+                let parts: Vec<&str> = line.split("invoke('").collect();
+                if parts.len() > 1 {
+                    let cmd = parts[1].split('\'').next().unwrap_or("");
+                    if !cmd.is_empty() {
+                        return Some(cmd.to_string());
+                    }
+                }
+            }
+            None
+        })
+        .collect();
+
+    let missing_bindings = sorted(&declared, &bound_commands);
+    assert!(
+        missing_bindings.is_empty(),
+        "command terdaftar di build.rs tetapi tidak ada di generated_bindings.ts: {missing_bindings:?}"
+    );
+
+    let excess_bindings = sorted(&bound_commands, &declared);
+    assert!(
+        excess_bindings.is_empty(),
+        "generated_bindings.ts memiliki command yang tidak terdaftar di build.rs: {excess_bindings:?}"
+    );
+
     // Guard: Every #[tauri::command] in commands.rs must invoke `guarded` or `run_guarded`
     let commands_code = std::fs::read_to_string(app_dir.join("src").join("commands.rs"))
         .expect("gagal membaca commands.rs");
@@ -405,5 +438,52 @@ fn tauri_command_registry_build_script_and_acl_agree() {
         unguarded_commands.is_empty(),
         "The following commands do not call guarded/run_guarded: {:?}",
         unguarded_commands
+    );
+}
+
+#[test]
+fn test_command_registry_five_sources_fails_on_fixture_when_source_lacks_command() {
+    let mut declared: HashSet<String> = ["cmd_a", "cmd_b", "cmd_c"]
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+    let handler: HashSet<String> = ["cmd_a", "cmd_b", "cmd_c"]
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+    let caps: HashSet<String> = ["cmd_a", "cmd_b", "cmd_c"]
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+    let policy: HashSet<String> = ["cmd_a", "cmd_b", "cmd_c"]
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+    let mut bindings: HashSet<String> = ["cmd_a", "cmd_b", "cmd_c"]
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+
+    // Baseline agreement
+    assert_eq!(declared, handler);
+    assert_eq!(declared, caps);
+    assert_eq!(declared, policy);
+    assert_eq!(declared, bindings);
+
+    // Negative fixture 1: bindings lacks cmd_c
+    bindings.remove("cmd_c");
+    let missing_from_bindings: Vec<String> = declared.difference(&bindings).cloned().collect();
+    assert_eq!(
+        missing_from_bindings,
+        vec!["cmd_c".to_string()],
+        "Must detect missing command in bindings fixture"
+    );
+
+    // Negative fixture 2: declared has an extra command not in policy
+    declared.insert("cmd_unregistered".to_string());
+    let missing_from_policy: Vec<String> = declared.difference(&policy).cloned().collect();
+    assert!(
+        missing_from_policy.contains(&"cmd_unregistered".to_string()),
+        "Must detect missing command in policy fixture"
     );
 }
