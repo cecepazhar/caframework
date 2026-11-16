@@ -305,6 +305,9 @@
   let showRestorePassphrase = $state(false);
   let restoreMsg = $state('');
   let restoreMsgKind = $state<'success' | 'error'>('success');
+  let lastSuccessfulBackupTime = $state<string | null>(null);
+  let backupFolder = $state('');
+  let backupRetention = $state(5);
 
   async function handleExport(e: Event) {
     e.preventDefault();
@@ -315,9 +318,9 @@
 
     try {
       showToast(t('settings.backup.creating'), 'info');
-      const b64 = await exportEncryptedBackup(backupPassphrase);
+      const data = await exportEncryptedBackup(backupPassphrase);
       
-      const blob = new Blob([b64], { type: 'text/plain' });
+      const blob = new Blob([new Uint8Array(data)], { type: 'application/octet-stream' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -325,6 +328,7 @@
       a.click();
       URL.revokeObjectURL(url);
 
+      lastSuccessfulBackupTime = new Date().toLocaleTimeString();
       showToast(t('settings.backup.savedToast'), 'success');
       backupPassphrase = '';
     } catch (err: any) {
@@ -342,7 +346,7 @@
     try {
       const input = document.createElement('input');
       input.type = 'file';
-      input.accept = '.catb,.enc,.txt';
+      input.accept = '.catb,.enc,.txt,.bin';
       input.onchange = async () => {
         const file = input.files?.[0];
         if (!file) return;
@@ -352,15 +356,16 @@
         const reader = new FileReader();
         reader.onload = async (event) => {
           try {
-            const b64 = event.target?.result as string;
-            const importedCount = await importEncryptedBackup(b64, restorePassphrase);
-            showToast(t('settings.backup.restored', { count: importedCount }), 'success');
+            const buffer = event.target?.result as ArrayBuffer;
+            const bytes = Array.from(new Uint8Array(buffer));
+            await importEncryptedBackup(bytes, restorePassphrase);
+            showToast(t('settings.backup.restored'), 'success');
             restorePassphrase = '';
           } catch (err: any) {
             showToast(err?.message || t('settings.backup.restoreFailed'), 'error');
           }
         };
-        reader.readAsText(file);
+        reader.readAsArrayBuffer(file);
       };
       input.click();
     } catch (err: any) {
@@ -865,6 +870,42 @@
         <h2 class="text-lg font-semibold text-neutral-900 dark:text-white">{t('settings.backup.title')}</h2>
         <p class="{MUTED} text-sm mt-1">{t('settings.backup.subtitle')}</p>
       </div>
+
+      {#if lastSuccessfulBackupTime}
+        <div class="p-3 bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800 rounded-md">
+          <p class="text-xs text-sky-800 dark:text-sky-300 font-medium">
+            Last successful backup: {lastSuccessfulBackupTime}
+          </p>
+        </div>
+      {/if}
+
+      <div class="space-y-4">
+        <h3 class="text-base font-semibold text-neutral-900 dark:text-white">Scheduled Backup & Retention</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg">
+          <div>
+            <label for="backup-folder" class={LABEL}>Backup Destination Folder</label>
+            <input
+              id="backup-folder"
+              type="text"
+              bind:value={backupFolder}
+              class="{INPUT}"
+            />
+          </div>
+          <div>
+            <label for="backup-retention" class={LABEL}>Retention (Copies kept)</label>
+            <input
+              id="backup-retention"
+              type="number"
+              min="1"
+              max="50"
+              bind:value={backupRetention}
+              class="{INPUT}"
+            />
+          </div>
+        </div>
+      </div>
+
+      <hr class="border-neutral-200 dark:border-neutral-800" />
 
       <div class="space-y-4">
         <h3 class="text-base font-semibold text-neutral-900 dark:text-white">{t('settings.backup.exportTitle')}</h3>
