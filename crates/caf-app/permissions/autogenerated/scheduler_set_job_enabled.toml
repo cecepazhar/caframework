@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-scheduler-set-job-enabled"
+description = "Enables the scheduler_set_job_enabled command without any pre-configured scope."
+commands.allow = ["scheduler_set_job_enabled"]
+
+[[permission]]
+identifier = "deny-scheduler-set-job-enabled"
+description = "Denies the scheduler_set_job_enabled command without any pre-configured scope."
+commands.deny = ["scheduler_set_job_enabled"]

@@ -3,6 +3,18 @@
   import { page } from '$app/state';
   import { changeMasterPassword, MIN_VAULT_PASSWORD_LEN } from '$lib/api/vault';
   import { exportEncryptedBackup, importEncryptedBackup } from '$lib/api/backup';
+  import {
+    listJobs,
+    setJobEnabled,
+    updateSchedule,
+    runJobNow,
+    getHistory,
+    getDesktopSettings,
+    setDesktopSettings,
+    type JobStatusDto,
+    type JobRunRecord,
+    type SchedulerDesktopSettings
+  } from '$lib/api/scheduler';
   import AiSettingsForm from '$lib/components/AiSettingsForm.svelte';
   import ProfileAvatar from '$lib/components/ProfileAvatar.svelte';
   import AvatarPicker from '$lib/components/AvatarPicker.svelte';
@@ -183,7 +195,7 @@
     t('settings.subscription.featureCommunity')
   ]);
 
-  const TABS = ['profile', 'updates', 'ai', 'subscription', 'security', 'backup', 'performance', 'shortcuts'] as const;
+  const TABS = ['profile', 'updates', 'ai', 'subscription', 'security', 'backup', 'schedules', 'performance', 'shortcuts'] as const;
   type SettingsTab = (typeof TABS)[number];
   // `?tab=` lets the profile menu deep-link straight to a tab.
   const requestedTab = page.url.searchParams.get('tab') ?? '';
@@ -239,6 +251,7 @@
 				lowPowerMode = prefs.lowPowerMode ?? false;
 			})
 			.catch(() => {}); // browser preview: no backend, keep default
+    loadScheduler();
 	});
 
 	// Performance preferences state
@@ -370,6 +383,63 @@
       input.click();
     } catch (err: any) {
       showToast(err?.message || t('settings.backup.restoreFailed'), 'error');
+    }
+  }
+
+  let schedulerJobs = $state<JobStatusDto[]>([]);
+  let schedulerHistory = $state<JobRunRecord[]>([]);
+  let desktopSettings = $state<SchedulerDesktopSettings>({ close_to_tray: false, start_at_login: false });
+  let editingJobKey = $state<string | null>(null);
+  let editScheduleVal = $state('');
+  let isRunningJob = $state<string | null>(null);
+
+  async function loadScheduler() {
+    try {
+      schedulerJobs = await listJobs();
+      schedulerHistory = await getHistory(null, 50);
+      desktopSettings = await getDesktopSettings();
+    } catch {}
+  }
+
+  async function handleToggleJob(job: JobStatusDto) {
+    try {
+      await setJobEnabled(job.key, !job.enabled);
+      await loadScheduler();
+    } catch (err: any) {
+      showToast(errorText(err), 'error');
+    }
+  }
+
+  async function handleSaveSchedule(key: string) {
+    try {
+      await updateSchedule(key, editScheduleVal);
+      editingJobKey = null;
+      showToast(t('settings.schedules.scheduleUpdated'), 'success');
+      await loadScheduler();
+    } catch (err: any) {
+      showToast(errorText(err), 'error');
+    }
+  }
+
+  async function handleRunNow(key: string) {
+    isRunningJob = key;
+    try {
+      await runJobNow(key);
+      showToast(t('settings.schedules.jobTriggered'), 'success');
+      await loadScheduler();
+    } catch (err: any) {
+      showToast(errorText(err), 'error');
+    } finally {
+      isRunningJob = null;
+    }
+  }
+
+  async function handleDesktopChange(closeToTray: boolean, startAtLogin: boolean) {
+    desktopSettings = { close_to_tray: closeToTray, start_at_login: startAtLogin };
+    try {
+      await setDesktopSettings(desktopSettings);
+    } catch (err: any) {
+      showToast(errorText(err), 'error');
     }
   }
 
@@ -992,6 +1062,176 @@
             {t('settings.backup.restoreButton')}
           </button>
         </form>
+      </div>
+    </div>
+  {:else if activeTab === 'schedules'}
+    <div class="{CARD} space-y-8">
+      <div>
+        <h2 class="text-lg font-semibold text-neutral-900 dark:text-white">{t('settings.schedules.title')}</h2>
+        <p class="text-xs {MUTED}">{t('settings.schedules.subtitle')}</p>
+      </div>
+
+      <!-- Desktop Tray & Start at Login -->
+      <div class="{SUBCARD} space-y-4">
+        <h3 class="text-sm font-semibold text-neutral-900 dark:text-white">{t('settings.schedules.trayTitle')}</h3>
+        <div class="flex flex-col sm:flex-row gap-4">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={desktopSettings.close_to_tray}
+              onchange={(e) => handleDesktopChange(e.currentTarget.checked, desktopSettings.start_at_login)}
+              class="rounded border-neutral-300 dark:border-neutral-700 text-sky-600 focus:ring-sky-500"
+            />
+            <span class="text-xs text-neutral-800 dark:text-neutral-200">{t('settings.schedules.closeToTray')}</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={desktopSettings.start_at_login}
+              onchange={(e) => handleDesktopChange(desktopSettings.close_to_tray, e.currentTarget.checked)}
+              class="rounded border-neutral-300 dark:border-neutral-700 text-sky-600 focus:ring-sky-500"
+            />
+            <span class="text-xs text-neutral-800 dark:text-neutral-200">{t('settings.schedules.startAtLogin')}</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Registered Jobs -->
+      <div class="space-y-4">
+        <h3 class="text-base font-semibold text-neutral-900 dark:text-white">{t('settings.schedules.jobsTitle')}</h3>
+        {#if schedulerJobs.length === 0}
+          <p class="text-xs {MUTED}">{t('settings.schedules.noJobs')}</p>
+        {:else}
+          <div class="space-y-3">
+            {#each schedulerJobs as job}
+              <div class="{SUBCARD} flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div class="space-y-1 min-w-0">
+                  <div class="flex items-center gap-2">
+                    <span class="font-medium text-sm text-neutral-900 dark:text-white">
+                      {intlLocale() === 'id' ? job.title_id : job.title_en}
+                    </span>
+                    <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400">
+                      {job.key}
+                    </span>
+                    {#if job.enabled}
+                      <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 font-medium">
+                        {t('settings.schedules.enabled')}
+                      </span>
+                    {:else}
+                      <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-200 dark:bg-neutral-800 text-neutral-500 font-medium">
+                        {t('settings.schedules.disabled')}
+                      </span>
+                    {/if}
+                  </div>
+                  <p class="text-xs text-neutral-600 dark:text-neutral-400">
+                    <span class="font-mono text-sky-600 dark:text-sky-400">{job.schedule}</span> — {intlLocale() === 'id' ? job.description_id : job.description_en}
+                  </p>
+                  <div class="flex items-center gap-4 text-[11px] {MUTED} pt-1">
+                    <span>
+                      {t('settings.schedules.lastRun')}: {job.last_run_at ? new Date(job.last_run_at * 1000).toLocaleString() : t('settings.schedules.never')}
+                      {#if job.last_status}
+                        <span class="ml-1 font-mono text-[10px] font-medium {job.last_status === 'success' ? 'text-emerald-500' : 'text-red-500'}">({job.last_status})</span>
+                      {/if}
+                    </span>
+                    <span>
+                      {t('settings.schedules.nextRun')}: {job.next_run_at ? new Date(job.next_run_at * 1000).toLocaleString() : t('settings.schedules.never')}
+                    </span>
+                  </div>
+
+                  {#if editingJobKey === job.key}
+                    <div class="flex items-center gap-2 pt-2">
+                      <input
+                        type="text"
+                        bind:value={editScheduleVal}
+                        placeholder={t('settings.schedules.editPlaceholder')}
+                        class="{INPUT} text-xs py-1 max-w-xs"
+                      />
+                      <button
+                        type="button"
+                        onclick={() => handleSaveSchedule(job.key)}
+                        class="px-2.5 py-1 bg-sky-600 hover:bg-sky-500 text-white text-xs font-medium rounded transition-colors"
+                      >
+                        {t('settings.schedules.save')}
+                      </button>
+                      <button
+                        type="button"
+                        onclick={() => (editingJobKey = null)}
+                        class="px-2.5 py-1 bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 text-xs font-medium rounded transition-colors"
+                      >
+                        {t('settings.schedules.cancel')}
+                      </button>
+                    </div>
+                  {/if}
+                </div>
+
+                <div class="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onclick={() => handleToggleJob(job)}
+                    class="px-2.5 py-1 text-xs font-medium rounded border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                  >
+                    {job.enabled ? t('settings.schedules.disabled') : t('settings.schedules.enabled')}
+                  </button>
+                  <button
+                    type="button"
+                    onclick={() => {
+                      editingJobKey = job.key;
+                      editScheduleVal = job.schedule;
+                    }}
+                    class="px-2.5 py-1 text-xs font-medium rounded border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                  >
+                    {t('settings.schedules.editSchedule')}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isRunningJob === job.key}
+                    onclick={() => handleRunNow(job.key)}
+                    class="px-3 py-1 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white text-xs font-medium rounded transition-colors"
+                  >
+                    {isRunningJob === job.key ? t('settings.schedules.running') : t('settings.schedules.runNow')}
+                  </button>
+                </div>
+              </div>
+            {/each}
+          </div>
+        {/if}
+      </div>
+
+      <!-- Run History -->
+      <div class="space-y-4 pt-4 border-t border-neutral-200 dark:border-neutral-800">
+        <h3 class="text-base font-semibold text-neutral-900 dark:text-white">{t('settings.schedules.historyTitle')}</h3>
+        {#if schedulerHistory.length === 0}
+          <p class="text-xs {MUTED}">{t('settings.schedules.noHistory')}</p>
+        {:else}
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-xs text-left">
+              <thead>
+                <tr class="border-b border-neutral-200 dark:border-neutral-800 text-neutral-500">
+                  <th class="py-2 pr-4 font-medium">Job</th>
+                  <th class="py-2 pr-4 font-medium">Status</th>
+                  <th class="py-2 pr-4 font-medium">Time</th>
+                  <th class="py-2 font-medium">Message</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-neutral-100 dark:divide-neutral-800/50">
+                {#each schedulerHistory.slice(0, 20) as rec}
+                  <tr>
+                    <td class="py-2 pr-4 font-mono text-neutral-700 dark:text-neutral-300">{rec.job_key}</td>
+                    <td class="py-2 pr-4">
+                      <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-medium {rec.status === 'success' ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400' : 'bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-400'}">
+                        {rec.status}
+                      </span>
+                    </td>
+                    <td class="py-2 pr-4 {MUTED} whitespace-nowrap">
+                      {new Date(rec.started_at * 1000).toLocaleTimeString()}
+                    </td>
+                    <td class="py-2 text-neutral-800 dark:text-neutral-200 break-words">{rec.message}</td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          </div>
+        {/if}
       </div>
     </div>
 	{:else if activeTab === 'performance'}

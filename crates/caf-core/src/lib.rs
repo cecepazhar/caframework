@@ -44,6 +44,7 @@ pub mod prefs;
 pub mod pro;
 pub mod profiles;
 pub mod rbac;
+pub mod scheduler;
 pub mod secret;
 pub mod session;
 pub mod vault;

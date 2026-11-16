@@ -297,6 +297,42 @@ pub const COMMAND_POLICIES: &[CommandPolicy] = &[
         policy: Policy::Session,
         returns_list: false,
     },
+    // Scheduler (P08)
+    CommandPolicy {
+        name: "scheduler_list_jobs",
+        policy: Policy::Requires("scheduler:view"),
+        returns_list: true,
+    },
+    CommandPolicy {
+        name: "scheduler_set_job_enabled",
+        policy: Policy::Requires("scheduler:manage"),
+        returns_list: false,
+    },
+    CommandPolicy {
+        name: "scheduler_update_schedule",
+        policy: Policy::Requires("scheduler:manage"),
+        returns_list: false,
+    },
+    CommandPolicy {
+        name: "scheduler_run_job_now",
+        policy: Policy::Requires("scheduler:manage"),
+        returns_list: false,
+    },
+    CommandPolicy {
+        name: "scheduler_get_history",
+        policy: Policy::Requires("scheduler:view"),
+        returns_list: true,
+    },
+    CommandPolicy {
+        name: "scheduler_get_desktop_settings",
+        policy: Policy::Session,
+        returns_list: false,
+    },
+    CommandPolicy {
+        name: "scheduler_set_desktop_settings",
+        policy: Policy::Requires("settings:manage"),
+        returns_list: false,
+    },
 ];
 
 pub fn get_command_policy(command_name: &str) -> Option<&'static CommandPolicy> {

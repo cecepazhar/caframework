@@ -213,3 +213,65 @@ export async function invoke_setPerformancePrefs(prefs: any): Promise<any> {
   return invoke('set_performance_prefs', { prefs: prefs });
 }
 
+export interface JobStatusDto {
+  key: string;
+  title_en: string;
+  title_id: string;
+  schedule: string;
+  description_en: string;
+  description_id: string;
+  permission: string;
+  enabled: boolean;
+  needs_vault: boolean;
+  catch_up: 'skip' | 'run_once';
+  max_runtime_secs: number;
+  background_safe: boolean;
+  last_run_at: number | null;
+  next_run_at: number | null;
+  last_status: string | null;
+  is_running: boolean;
+}
+
+export interface JobRunRecord {
+  id: string;
+  job_key: string;
+  started_at: number;
+  finished_at: number;
+  status: string;
+  message: string;
+}
+
+export interface SchedulerDesktopSettings {
+  close_to_tray: boolean;
+  start_at_login: boolean;
+}
+
+export async function invoke_schedulerListJobs(): Promise<JobStatusDto[]> {
+  return invoke('scheduler_list_jobs');
+}
+
+export async function invoke_schedulerSetJobEnabled(key: string, enabled: boolean): Promise<any> {
+  return invoke('scheduler_set_job_enabled', { key, enabled });
+}
+
+export async function invoke_schedulerUpdateSchedule(key: string, schedule: string): Promise<any> {
+  return invoke('scheduler_update_schedule', { key, schedule });
+}
+
+export async function invoke_schedulerRunJobNow(key: string): Promise<string> {
+  return invoke('scheduler_run_job_now', { key });
+}
+
+export async function invoke_schedulerGetHistory(key: string | null, limit: number | null): Promise<JobRunRecord[]> {
+  return invoke('scheduler_get_history', { key, limit });
+}
+
+export async function invoke_schedulerGetDesktopSettings(): Promise<SchedulerDesktopSettings> {
+  return invoke('scheduler_get_desktop_settings');
+}
+
+export async function invoke_schedulerSetDesktopSettings(settings: SchedulerDesktopSettings): Promise<any> {
+  return invoke('scheduler_set_desktop_settings', { settings });
+}
+
+

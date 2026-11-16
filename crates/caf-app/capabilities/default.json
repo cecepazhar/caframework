@@ -60,6 +60,13 @@
     "allow-import-encrypted-backup",
     "allow-get-performance-prefs",
     "allow-set-performance-prefs",
+    "allow-scheduler-list-jobs",
+    "allow-scheduler-set-job-enabled",
+    "allow-scheduler-update-schedule",
+    "allow-scheduler-run-job-now",
+    "allow-scheduler-get-history",
+    "allow-scheduler-get-desktop-settings",
+    "allow-scheduler-set-desktop-settings",
     "dialog:default",
     "process:default",
     "fs:default"

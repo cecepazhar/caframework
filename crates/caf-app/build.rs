@@ -69,6 +69,14 @@ const COMMANDS: &[&str] = &[
     // Preferences
     "get_performance_prefs",
     "set_performance_prefs",
+    // Scheduler (P08)
+    "scheduler_list_jobs",
+    "scheduler_set_job_enabled",
+    "scheduler_update_schedule",
+    "scheduler_run_job_now",
+    "scheduler_get_history",
+    "scheduler_get_desktop_settings",
+    "scheduler_set_desktop_settings",
 ];
 
 fn main() {

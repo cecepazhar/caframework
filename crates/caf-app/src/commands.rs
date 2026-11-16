@@ -423,3 +423,67 @@ pub async fn set_performance_prefs(prefs: prefs::PerformancePrefs) -> Result<(),
     })
     .await
 }
+
+// Scheduler commands (P08)
+#[tauri::command]
+pub async fn scheduler_list_jobs() -> Result<Vec<caf_core::scheduler::JobStatusDto>, CafError> {
+    run_guarded("scheduler_list_jobs", || {
+        Ok(caf_core::scheduler::list_jobs())
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn scheduler_set_job_enabled(key: String, enabled: bool) -> Result<(), CafError> {
+    run_guarded("scheduler_set_job_enabled", move || {
+        caf_core::scheduler::set_job_enabled(&key, enabled)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn scheduler_update_schedule(key: String, schedule: String) -> Result<(), CafError> {
+    run_guarded("scheduler_update_schedule", move || {
+        caf_core::scheduler::update_job_schedule(&key, &schedule)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn scheduler_run_job_now(key: String) -> Result<String, CafError> {
+    guarded("scheduler_run_job_now", || Ok(()))?;
+    caf_core::scheduler::run_job_now(&key).await
+}
+
+#[tauri::command]
+pub async fn scheduler_get_history(
+    key: Option<String>,
+    limit: Option<usize>,
+) -> Result<Vec<caf_core::scheduler::JobRunRecord>, CafError> {
+    run_guarded("scheduler_get_history", move || {
+        Ok(caf_core::scheduler::get_job_history(
+            key.as_deref(),
+            limit.unwrap_or(50),
+        ))
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn scheduler_get_desktop_settings()
+-> Result<caf_core::scheduler::SchedulerDesktopSettings, CafError> {
+    run_guarded("scheduler_get_desktop_settings", || {
+        Ok(caf_core::scheduler::get_desktop_settings())
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn scheduler_set_desktop_settings(
+    settings: caf_core::scheduler::SchedulerDesktopSettings,
+) -> Result<(), CafError> {
+    run_guarded("scheduler_set_desktop_settings", move || {
+        caf_core::scheduler::set_desktop_settings(settings)
+    })
+    .await
+}

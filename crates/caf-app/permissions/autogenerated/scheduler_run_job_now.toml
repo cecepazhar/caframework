@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-scheduler-run-job-now"
+description = "Enables the scheduler_run_job_now command without any pre-configured scope."
+commands.allow = ["scheduler_run_job_now"]
+
+[[permission]]
+identifier = "deny-scheduler-run-job-now"
+description = "Denies the scheduler_run_job_now command without any pre-configured scope."
+commands.deny = ["scheduler_run_job_now"]
