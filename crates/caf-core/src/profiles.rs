@@ -179,6 +179,18 @@ pub fn save_profile(
 }
 
 pub fn verify_pin(profile_id: &str, pin: &str) -> Result<bool, CafError> {
+    verify_pin_with_clock(profile_id, pin, &crate::backoff::SystemClock)
+}
+
+pub fn verify_pin_with_clock(
+    profile_id: &str,
+    pin: &str,
+    clock: &dyn crate::backoff::Clock,
+) -> Result<bool, CafError> {
+    let data_dir = crate::paths::data_dir()?;
+    let backoff = crate::backoff::BackoffManager::load(&data_dir);
+    backoff.check_lockout(clock)?;
+
     let conn = db::open()?;
     let pin_hash: Option<String> = conn
         .query_row(
@@ -200,7 +212,17 @@ pub fn verify_pin(profile_id: &str, pin: &str) -> Result<bool, CafError> {
         .map_err(|e| CafError::Auth(AuthError::Generic(format!("Corrupt PIN hash: {e}"))))?;
 
     let argon2 = Argon2::default();
-    Ok(argon2.verify_password(pin.as_bytes(), &parsed_hash).is_ok())
+    let is_ok = argon2.verify_password(pin.as_bytes(), &parsed_hash).is_ok();
+    if is_ok {
+        let _ = backoff.record_pin_success(Some(&data_dir));
+        Ok(true)
+    } else {
+        let should_lock = backoff.record_pin_failure(clock, Some(&data_dir))?;
+        if should_lock {
+            crate::vault::lock();
+        }
+        Ok(false)
+    }
 }
 
 pub fn get_profile(id: &str) -> Result<Option<ProfileRecord>, CafError> {

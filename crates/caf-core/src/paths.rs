@@ -119,6 +119,17 @@ pub fn db_path(data_dir: &Path) -> PathBuf {
     data_dir.join("caframework.db")
 }
 
+pub fn ensure_secure_dir(path: &Path) -> Result<(), CafError> {
+    std::fs::create_dir_all(path)
+        .map_err(|e| CafError::Io(IoError::Generic(format!("create dir failed: {e}"))))?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o700));
+    }
+    Ok(())
+}
+
 pub fn crash_dumps_dir(data_dir: &Path) -> PathBuf {
     data_dir.join("crash-dumps")
 }

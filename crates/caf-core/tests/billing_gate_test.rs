@@ -33,6 +33,7 @@ fn test_require_pro_rust_guard_rejection_and_acceptance() {
     let temp_dir = std::env::temp_dir().join(format!("caf_gate_test_{}", uuid::Uuid::new_v4()));
     std::fs::create_dir_all(&temp_dir).unwrap();
     caf_core::paths::set_custom_data_dir(temp_dir.clone()).unwrap();
+    caf_core::vault::init_test_vault(&temp_dir);
 
     let (key, pub_b64, kid) = generate_keys();
     let keys = vec![(kid.clone(), pub_b64)];

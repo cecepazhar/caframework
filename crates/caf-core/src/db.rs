@@ -208,6 +208,18 @@ fn raw_key_literal(passphrase: &str) -> Option<String> {
 }
 
 fn open_keyed(db_path: &Path, key_literal: &str) -> Result<Connection, CafError> {
+    if db_path.exists()
+        && let Ok(metadata) = std::fs::metadata(db_path)
+        && metadata.len() >= 16
+        && let Ok(mut file) = std::fs::File::open(db_path)
+    {
+        use std::io::Read;
+        let mut header = [0u8; 16];
+        if file.read_exact(&mut header).is_ok() && &header == b"SQLite format 3\0" {
+            return Err(CafError::Vault(crate::error::VaultError::CorruptedHeader));
+        }
+    }
+
     let conn = Connection::open(db_path)
         .map_err(|e| CafError::Db(DbError::Generic(format!("failed to open database: {e}"))))?;
 
@@ -215,11 +227,14 @@ fn open_keyed(db_path: &Path, key_literal: &str) -> Result<Connection, CafError>
         .map_err(|e| CafError::Db(DbError::Generic(format!("failed to set vault key: {e}"))))?;
 
     conn.query_row("SELECT count(*) FROM sqlite_master", [], |_| Ok(()))
-        .map_err(|_| {
-            CafError::Db(DbError::Generic(
-                "invalid vault key or corrupted database".into(),
-            ))
-        })?;
+        .map_err(|_| CafError::Vault(crate::error::VaultError::CorruptedHeader))?;
+
+    // PRAGMA integrity_check on unlock (P03.4)
+    let integrity: Result<String, _> = conn.query_row("PRAGMA integrity_check;", [], |r| r.get(0));
+    match integrity {
+        Ok(res) if res == "ok" => {}
+        _ => return Err(CafError::Vault(crate::error::VaultError::CorruptedHeader)),
+    }
 
     conn.execute_batch(
         "PRAGMA journal_mode = WAL;\nPRAGMA synchronous = NORMAL;\nPRAGMA foreign_keys = ON;",

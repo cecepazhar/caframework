@@ -26,6 +26,7 @@ pub mod ai_context;
 pub mod ai_context_notes;
 pub mod api;
 pub mod audit;
+pub mod backoff;
 pub mod backup;
 pub mod billing;
 pub mod crash;
@@ -85,11 +86,13 @@ pub(crate) mod test_support {
         unsafe {
             std::env::set_var("CAF_DATA_DIR", &path);
         }
-        IsolatedDataDir {
-            path,
+        let dir = IsolatedDataDir {
+            path: path.clone(),
             previous,
             _guard: guard,
-        }
+        };
+        crate::vault::init_test_vault(&path);
+        dir
     }
 
     impl Drop for IsolatedDataDir {

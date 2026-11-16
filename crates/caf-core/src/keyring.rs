@@ -406,20 +406,27 @@ pub fn replace_recovery_slot(
 // --------------------------------------------------------------------------
 
 /// Load and deserialise the keyring from `<data_dir>/keyring.v1.json`.
-/// Returns `LegacyFormat` when only the old canary layout exists.
+/// Returns `LegacyFormat` when only the old canary layout exists or legacy plaintext keys exist.
 pub fn load(data_dir: &Path) -> Result<Keyring, CafError> {
     let keyring_path = data_dir.join(KEYRING_FILE);
 
     if !keyring_path.exists() {
-        // Detect legacy vault layout (vault_salt.bin + vault_canary.bin, no keyring).
-        let is_legacy =
-            data_dir.join("vault_salt.bin").exists() || data_dir.join("vault_canary.bin").exists();
+        // Detect legacy vault layout (vault.key, local.key, or vault_salt.bin/vault_canary.bin without keyring).
+        let is_legacy = data_dir.join("vault.key").exists()
+            || data_dir.join("local.key").exists()
+            || data_dir.join("vault_salt.bin").exists()
+            || data_dir.join("vault_canary.bin").exists();
         if is_legacy {
             return Err(CafError::Vault(VaultError::LegacyFormat));
         }
         return Err(CafError::Vault(VaultError::Generic(
             "keyring not found; vault not initialized".into(),
         )));
+    }
+
+    // Even if keyring exists, presence of legacy keys must be rejected per P03.1
+    if data_dir.join("vault.key").exists() || data_dir.join("local.key").exists() {
+        return Err(CafError::Vault(VaultError::LegacyFormat));
     }
 
     let raw = std::fs::read_to_string(&keyring_path)
@@ -439,11 +446,11 @@ pub fn load(data_dir: &Path) -> Result<Keyring, CafError> {
 }
 
 /// Atomically write the keyring to disk:
-///   1. Write to `keyring.v1.json.tmp`.
-///   2. Rename over `keyring.v1.json`.
+///   1. Ensure secure data dir (0700 on Unix).
+///   2. Write to `keyring.v1.json.tmp` with 0600 permissions.
+///   3. Rename over `keyring.v1.json`.
 pub fn save(data_dir: &Path, keyring: &Keyring) -> Result<(), CafError> {
-    std::fs::create_dir_all(data_dir)
-        .map_err(|e| keyring_err(format!("cannot create data dir: {e}")))?;
+    crate::paths::ensure_secure_dir(data_dir)?;
 
     let tmp_path = data_dir.join(format!("{KEYRING_FILE}.tmp"));
     let final_path = data_dir.join(KEYRING_FILE);
@@ -458,6 +465,12 @@ pub fn save(data_dir: &Path, keyring: &Keyring) -> Result<(), CafError> {
             .map_err(|e| keyring_err(format!("cannot write tmp keyring: {e}")))?;
         f.sync_all()
             .map_err(|e| keyring_err(format!("fsync tmp keyring failed: {e}")))?;
+    }
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = std::fs::set_permissions(&tmp_path, std::fs::Permissions::from_mode(0o600));
     }
 
     std::fs::rename(&tmp_path, &final_path)

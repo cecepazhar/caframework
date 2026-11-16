@@ -12,6 +12,7 @@ async fn test_billing_client_integration_against_mock() {
         std::env::temp_dir().join(format!("caf_client_mock_test_{}", uuid::Uuid::new_v4()));
     std::fs::create_dir_all(&temp_dir).unwrap();
     caf_core::paths::set_custom_data_dir(temp_dir.clone()).unwrap();
+    caf_core::vault::init_test_vault(&temp_dir);
 
     let (signing_key, verifying_key, kid) = init_dev_keys();
     let pub_key_b64 = base64::engine::general_purpose::STANDARD.encode(verifying_key.as_bytes());
