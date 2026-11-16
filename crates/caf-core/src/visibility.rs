@@ -19,12 +19,20 @@ impl Visibility {
         }
     }
 
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub fn parse(s: &str) -> Option<Self> {
+        <Self as std::str::FromStr>::from_str(s).ok()
+    }
+}
+
+impl std::str::FromStr for Visibility {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "shared" => Some(Self::Shared),
-            "private_summary" => Some(Self::PrivateSummary),
-            "private" => Some(Self::Private),
-            _ => None,
+            "shared" => Ok(Self::Shared),
+            "private_summary" => Ok(Self::PrivateSummary),
+            "private" => Ok(Self::Private),
+            _ => Err(()),
         }
     }
 }

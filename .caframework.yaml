@@ -2,10 +2,10 @@ REPO_DIR: ~/Product/caframework
 BASE_COMMIT: auto
 WORK_BRANCH: main
 FEATURE_BRANCH: main
-PLANS: [TASK_FIX.md, TASK_FEATURES.md]
+PLANS: ["~/Notes/notes/4 - Product/1 CAFramework/task.md"]
 STOP_AFTER_PLAN: ""
 RUNNER: any
-HAS_TAURI_DEPS: false
+HAS_TAURI_DEPS: true
 CAN_PUSH: true
 REMOTE: origin
 OWNER_CHANNEL: telegram

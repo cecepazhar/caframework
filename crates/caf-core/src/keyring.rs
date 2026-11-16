@@ -128,10 +128,7 @@ fn random_key() -> Zeroizing<[u8; KEY_LEN]> {
 }
 
 /// Argon2id key derivation (password → KEK_pw).
-fn derive_password_kek(
-    password: &str,
-    salt: &[u8],
-) -> Result<Zeroizing<[u8; KEY_LEN]>, CafError> {
+fn derive_password_kek(password: &str, salt: &[u8]) -> Result<Zeroizing<[u8; KEY_LEN]>, CafError> {
     let mut key = Zeroizing::new([0u8; KEY_LEN]);
     let params = Params::new(ARGON2_M_COST, ARGON2_T_COST, ARGON2_P_COST, Some(KEY_LEN))
         .map_err(|e| keyring_err(e.to_string()))?;
@@ -192,11 +189,7 @@ fn hkdf_sha256_expand(prk: &[u8], info: &[u8], len: usize) -> Zeroizing<[u8; KEY
 }
 
 /// AES-256-GCM wrap: `AEAD(kek, plaintext, aad)`.
-fn aes_gcm_wrap(
-    kek: &[u8],
-    plaintext: &[u8],
-    aad: &[u8],
-) -> Result<(Vec<u8>, Vec<u8>), CafError> {
+fn aes_gcm_wrap(kek: &[u8], plaintext: &[u8], aad: &[u8]) -> Result<(Vec<u8>, Vec<u8>), CafError> {
     let cipher = Aes256Gcm::new_from_slice(kek)
         .map_err(|e| keyring_err(format!("cipher init failed: {e}")))?;
     let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
@@ -325,10 +318,7 @@ pub fn generate(
 // --------------------------------------------------------------------------
 
 /// Unwrap keyring with a master password. Returns `WrongPassword` on auth failure.
-pub fn unwrap_with_password(
-    keyring: &Keyring,
-    password: &str,
-) -> Result<UnwrappedKeys, CafError> {
+pub fn unwrap_with_password(keyring: &Keyring, password: &str) -> Result<UnwrappedKeys, CafError> {
     let salt_pw = b64_dec(&keyring.password_slot.salt_pw)?;
     let nonce = b64_dec(&keyring.password_slot.nonce)?;
     let ct = b64_dec(&keyring.password_slot.ct)?;
@@ -435,9 +425,8 @@ pub fn load(data_dir: &Path) -> Result<Keyring, CafError> {
     let raw = std::fs::read_to_string(&keyring_path)
         .map_err(|e| keyring_err(format!("cannot read keyring: {e}")))?;
 
-    let keyring: Keyring = serde_json::from_str(&raw).map_err(|e| {
-        CafError::Vault(VaultError::Generic(format!("keyring JSON corrupt: {e}")))
-    })?;
+    let keyring: Keyring = serde_json::from_str(&raw)
+        .map_err(|e| CafError::Vault(VaultError::Generic(format!("keyring JSON corrupt: {e}"))))?;
 
     if keyring.format != FORMAT_VERSION {
         return Err(CafError::Vault(VaultError::Generic(format!(
@@ -747,10 +736,7 @@ mod tests {
         assert!(res.is_err());
         // WrongPassword is returned because AEAD auth failure maps to that
         assert!(
-            matches!(
-                res.unwrap_err(),
-                CafError::Vault(VaultError::WrongPassword)
-            ),
+            matches!(res.unwrap_err(), CafError::Vault(VaultError::WrongPassword)),
             "expected WrongPassword on corrupted CT"
         );
     }
@@ -847,10 +833,7 @@ mod tests {
         let res = load(tmp.path());
         assert!(res.is_err());
         assert!(
-            matches!(
-                res.unwrap_err(),
-                CafError::Vault(VaultError::LegacyFormat)
-            ),
+            matches!(res.unwrap_err(), CafError::Vault(VaultError::LegacyFormat)),
             "expected LegacyFormat variant"
         );
     }

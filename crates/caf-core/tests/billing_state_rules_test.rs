@@ -1,16 +1,16 @@
-use caf_core::billing::state::{compute_effective_state, EffectiveTier};
-use caf_core::billing::token::{verify_and_parse_token, EntitlementPayload};
 use base64::Engine;
+use caf_core::billing::state::{EffectiveTier, compute_effective_state};
+use caf_core::billing::token::{EntitlementPayload, verify_and_parse_token};
 use ed25519_dalek::{Signer, SigningKey};
-use rand::rngs::OsRng;
 use rand::RngCore;
+use rand::rngs::OsRng;
 
 fn generate_test_keys() -> (SigningKey, String, String) {
     let mut key_bytes = [0u8; 32];
     OsRng.fill_bytes(&mut key_bytes);
     let signing_key = SigningKey::from_bytes(&key_bytes);
-    let pub_key_b64 = base64::engine::general_purpose::STANDARD
-        .encode(signing_key.verifying_key().as_bytes());
+    let pub_key_b64 =
+        base64::engine::general_purpose::STANDARD.encode(signing_key.verifying_key().as_bytes());
     let kid = "gcc-2026-10".to_string();
     (signing_key, pub_key_b64, kid)
 }
@@ -21,8 +21,9 @@ fn create_signed_token(
     kid: &str,
     tamper_sig: bool,
 ) -> String {
-    let header_b64 = base64::engine::general_purpose::URL_SAFE_NO_PAD
-        .encode(serde_json::to_vec(&serde_json::json!({"alg": "EdDSA", "typ": "JWT", "kid": kid})).unwrap());
+    let header_b64 = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(
+        serde_json::to_vec(&serde_json::json!({"alg": "EdDSA", "typ": "JWT", "kid": kid})).unwrap(),
+    );
     let payload_b64 = base64::engine::general_purpose::URL_SAFE_NO_PAD
         .encode(serde_json::to_vec(payload).unwrap());
     let signing_input = format!("{}.{}", header_b64, payload_b64);
@@ -119,13 +120,23 @@ fn test_state_rule_4_offline_allowance_6_vs_8_days() {
     let verified_at = 1_000_000;
     // 6 days offline (6 * 86400 = 518400) -> Still Pro
     let now_6_days = verified_at + 518400;
-    let state = compute_effective_state(Some(&payload), Some(verified_at), Some(now_6_days), now_6_days);
+    let state = compute_effective_state(
+        Some(&payload),
+        Some(verified_at),
+        Some(now_6_days),
+        now_6_days,
+    );
     assert_eq!(state.tier, EffectiveTier::Pro);
     assert!(state.is_pro);
 
     // 8 days offline (8 * 86400 = 691200) -> Needs Online Check
     let now_8_days = verified_at + 691200;
-    let state = compute_effective_state(Some(&payload), Some(verified_at), Some(now_8_days), now_8_days);
+    let state = compute_effective_state(
+        Some(&payload),
+        Some(verified_at),
+        Some(now_8_days),
+        now_8_days,
+    );
     assert_eq!(state.tier, EffectiveTier::FreeNeedsOnlineCheck);
     assert!(!state.is_pro);
 }
@@ -149,7 +160,12 @@ fn test_state_rule_5_clock_rollback() {
     let max_seen = 2_000_000;
     // Clock moved backwards by 1 hour (3600s > 600s tolerance)
     let rolled_back_now = max_seen - 3600;
-    let state = compute_effective_state(Some(&payload), Some(rolled_back_now), Some(max_seen), rolled_back_now);
+    let state = compute_effective_state(
+        Some(&payload),
+        Some(rolled_back_now),
+        Some(max_seen),
+        rolled_back_now,
+    );
     assert_eq!(state.tier, EffectiveTier::FreeNeedsOnlineCheck);
     assert!(!state.is_pro);
 }
@@ -177,8 +193,12 @@ fn test_state_rule_6_lifetime_and_grace_period() {
     // 2. Timed: Active Pro -> Grace -> Expired
     let exp_str = "2026-11-05T00:00:00Z"; // 1793836800 unix approx
     let grace_str = "2026-11-12T00:00:00Z";
-    let exp_unix = chrono::DateTime::parse_from_rfc3339(exp_str).unwrap().timestamp() as u64;
-    let grace_unix = chrono::DateTime::parse_from_rfc3339(grace_str).unwrap().timestamp() as u64;
+    let exp_unix = chrono::DateTime::parse_from_rfc3339(exp_str)
+        .unwrap()
+        .timestamp() as u64;
+    let grace_unix = chrono::DateTime::parse_from_rfc3339(grace_str)
+        .unwrap()
+        .timestamp() as u64;
 
     let timed_payload = EntitlementPayload {
         v: 1,
@@ -195,17 +215,32 @@ fn test_state_rule_6_lifetime_and_grace_period() {
     };
 
     // Before expiry -> Pro
-    let state_active = compute_effective_state(Some(&timed_payload), Some(exp_unix - 1000), Some(exp_unix - 1000), exp_unix - 1000);
+    let state_active = compute_effective_state(
+        Some(&timed_payload),
+        Some(exp_unix - 1000),
+        Some(exp_unix - 1000),
+        exp_unix - 1000,
+    );
     assert_eq!(state_active.tier, EffectiveTier::Pro);
     assert!(state_active.is_pro);
 
     // During grace -> ProGrace
-    let state_grace = compute_effective_state(Some(&timed_payload), Some(exp_unix + 1000), Some(exp_unix + 1000), exp_unix + 1000);
+    let state_grace = compute_effective_state(
+        Some(&timed_payload),
+        Some(exp_unix + 1000),
+        Some(exp_unix + 1000),
+        exp_unix + 1000,
+    );
     assert_eq!(state_grace.tier, EffectiveTier::ProGrace);
     assert!(state_grace.is_pro);
 
     // After grace -> Free
-    let state_expired = compute_effective_state(Some(&timed_payload), Some(grace_unix + 1000), Some(grace_unix + 1000), grace_unix + 1000);
+    let state_expired = compute_effective_state(
+        Some(&timed_payload),
+        Some(grace_unix + 1000),
+        Some(grace_unix + 1000),
+        grace_unix + 1000,
+    );
     assert_eq!(state_expired.tier, EffectiveTier::Free);
     assert!(!state_expired.is_pro);
 }

@@ -4,6 +4,9 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 fn get_workspace_root() -> PathBuf {
+    if let Ok(dir) = env::var("CAF_GUARD_ROOT") {
+        return PathBuf::from(dir);
+    }
     match env::var("CARGO_MANIFEST_DIR") {
         Ok(dir) => {
             let p = PathBuf::from(dir);
@@ -20,8 +23,13 @@ pub fn run_guard(only: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
     let mut failures = Vec::new();
     let root = get_workspace_root();
 
-    // (a) No tracked file > 1MB or tracking binaries/DB (tracked only via git ls-files if inside repo)
-    if should_run("oversized_or_binary", only) || should_run("file_size_and_binary", only) {
+    // (a) Repository hygiene & tracked files (FR-14, A-07):
+    // Checks for oversized files (> 1MB), forbidden extensions (*.key, *.db, *.log, binaries),
+    // and forbidden internal directories (Notes/, target/, node_modules/, plans, ledgers, audits).
+    if should_run("oversized_or_binary", only)
+        || should_run("file_size_and_binary", only)
+        || should_run("repository_hygiene", only)
+    {
         check_tracked_files(&root, &mut failures)?;
     }
 
@@ -48,6 +56,11 @@ pub fn run_guard(only: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
     // (f) Genericity
     if should_run("genericity", only) {
         check_genericity(&root, &mut failures)?;
+    }
+
+    // (g) Ledger fidelity & evidence guard (P01.8)
+    if should_run("ledger", only) {
+        check_ledger(&mut failures)?;
     }
 
     if !failures.is_empty() {
@@ -148,16 +161,40 @@ fn check_tracked_files(
         }
 
         let fn_str = path.to_string_lossy();
-        if (fn_str.ends_with(".db")
-            || fn_str.ends_with(".sqlite")
-            || fn_str.ends_with(".sqlite3")
-            || fn_str.ends_with(".exe")
-            || fn_str.ends_with(".dll")
-            || fn_str.ends_with(".so"))
+        let rel_lower = rel_path.to_lowercase();
+
+        // Check forbidden extensions: *.key, *.db, *.sqlite*, *.log, *.exe, *.dll, *.so
+        if (rel_lower.ends_with(".db")
+            || rel_lower.ends_with(".sqlite")
+            || rel_lower.ends_with(".sqlite3")
+            || rel_lower.ends_with(".key")
+            || rel_lower.ends_with(".log")
+            || rel_lower.ends_with(".exe")
+            || rel_lower.ends_with(".dll")
+            || rel_lower.ends_with(".so"))
             && !allowed_large_files.contains(&rel_path)
         {
             failures.push(format!(
-                "oversized_or_binary: {}:0: Tracked file has forbidden binary/DB extension",
+                "repository_hygiene: {}:0: Tracked file has forbidden key/log/binary/DB extension",
+                rel_path
+            ));
+        }
+
+        // Check forbidden internal paths / documents inside repository (FR-14, A-07)
+        if rel_path.starts_with("Notes/")
+            || rel_path.starts_with("target/")
+            || rel_path.starts_with("node_modules/")
+            || rel_path.contains("/node_modules/")
+            || rel_path == "task.md"
+            || rel_path == "prompt.md"
+            || rel_path == "prd.md"
+            || rel_path == "prd-amendments.md"
+            || rel_path.starts_with("ledger")
+            || rel_path.contains("bukti/")
+            || rel_path.contains("audit/")
+        {
+            failures.push(format!(
+                "repository_hygiene: {}:0: Tracked file violates repository hygiene (internal notes/plans/ledgers/audits inside repo)",
                 rel_path
             ));
         } else {
@@ -466,5 +503,122 @@ fn check_genericity(
             }
         }
     }
+    Ok(())
+}
+
+fn check_ledger(failures: &mut Vec<String>) -> Result<(), Box<dyn std::error::Error>> {
+    let plan_dir = if let Ok(dir) = env::var("CAF_PLAN_DIR") {
+        PathBuf::from(dir)
+    } else {
+        let home = env::var("HOME").unwrap_or_else(|_| ".".into());
+        PathBuf::from(home).join("Notes/notes/4 - Product/1 CAFramework")
+    };
+
+    if !plan_dir.exists() {
+        return Ok(());
+    }
+
+    let task_path = plan_dir.join("task.md");
+    let ledger_path = plan_dir.join("ledger-v3.md");
+    let bukti_dir = plan_dir.join("bukti/v3");
+
+    if !task_path.exists() || !ledger_path.exists() {
+        return Ok(());
+    }
+
+    let task_content = fs::read_to_string(&task_path)?;
+    let ledger_content = fs::read_to_string(&ledger_path)?;
+
+    // 1. Extract tasks from task.md
+    let mut task_specs: Vec<(String, String)> = Vec::new();
+    for line in task_content.lines() {
+        let line = line.trim();
+        if line.starts_with("**P") && line.contains("**") {
+            let inner = line.trim_start_matches("**");
+            if let Some(idx) = inner.find("**") {
+                let bold_part = &inner[..idx];
+                let mut parts = bold_part.splitn(2, ' ');
+                if let (Some(id), Some(title)) = (parts.next(), parts.next())
+                    && id.starts_with('P')
+                    && id.contains('.')
+                {
+                    task_specs.push((id.trim().to_string(), title.trim().to_string()));
+                }
+            }
+        }
+    }
+
+    // 2. Extract tasks from ledger-v3.md
+    let mut ledger_tasks: std::collections::HashMap<String, (String, String, String)> =
+        std::collections::HashMap::new();
+    for line in ledger_content.lines() {
+        let line = line.trim();
+        if line.starts_with("| P") {
+            let cols: Vec<&str> = line.split('|').map(|s| s.trim()).collect();
+            if cols.len() >= 5 {
+                let tid = cols[1].to_string();
+                let title = cols[2].to_string();
+                let status = cols[3].to_string();
+                let anchor = cols[4].to_string();
+                ledger_tasks.insert(tid, (title, status, anchor));
+            }
+        }
+    }
+
+    // 3. Compare tasks
+    for (tid, expected_title) in &task_specs {
+        match ledger_tasks.get(tid) {
+            None => {
+                failures.push(format!(
+                    "ledger_guard: Task {} missing from ledger-v3.md",
+                    tid
+                ));
+            }
+            Some((actual_title, status, anchor)) => {
+                if actual_title != expected_title {
+                    failures.push(format!(
+                        "ledger_guard: Task {} title mismatch. task.md: {:?} vs ledger: {:?}",
+                        tid, expected_title, actual_title
+                    ));
+                }
+                let valid_statuses = [
+                    "TODO",
+                    "IN_PROGRESS",
+                    "DONE",
+                    "DONE (sudah sesuai)",
+                    "PARTIAL",
+                    "UI-ONLY",
+                    "NOT_VERIFIED",
+                    "BLOCKED",
+                ];
+                if !valid_statuses.contains(&status.as_str()) {
+                    failures.push(format!(
+                        "ledger_guard: Task {} has invalid status {:?}",
+                        tid, status
+                    ));
+                }
+                if status == "DONE" || status == "DONE (sudah sesuai)" {
+                    if anchor.is_empty() {
+                        failures.push(format!(
+                            "ledger_guard: Task {} marked {} without evidence anchor",
+                            tid, status
+                        ));
+                    } else {
+                        let file_part = anchor.split('#').next().unwrap_or("");
+                        if !file_part.is_empty() {
+                            let ev_file = bukti_dir.join(file_part);
+                            if !ev_file.exists() {
+                                failures.push(format!(
+                                    "ledger_guard: Task {} evidence file {:?} does not exist in bukti/v3/",
+                                    tid, file_part
+                                ));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     Ok(())
 }

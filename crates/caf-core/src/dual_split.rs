@@ -7,44 +7,32 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
+#[derive(Default)]
 pub enum GlobalSplitLayout {
+    #[default]
     Single,
     TwoColumns,
     TwoRows,
     TwoByTwoGrid,
 }
 
-impl Default for GlobalSplitLayout {
-    fn default() -> Self {
-        Self::Single
-    }
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
+#[derive(Default)]
 pub enum InPaneSplitDirection {
+    #[default]
     None,
     Horizontal,
     Vertical,
 }
 
-impl Default for InPaneSplitDirection {
-    fn default() -> Self {
-        Self::None
-    }
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
+#[derive(Default)]
 pub enum PaneRole {
+    #[default]
     Primary,
     Secondary,
-}
-
-impl Default for PaneRole {
-    fn default() -> Self {
-        Self::Primary
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

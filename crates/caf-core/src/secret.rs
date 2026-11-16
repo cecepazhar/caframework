@@ -68,9 +68,9 @@ pub fn encrypt_bytes(key: &[u8; 32], plaintext: &[u8]) -> Result<String, CafErro
         )))
     })?;
     let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
-    let ciphertext = cipher.encrypt(&nonce, plaintext).map_err(|e| {
-        CafError::Vault(VaultError::Generic(format!("gagal enkripsi secret: {e}")))
-    })?;
+    let ciphertext = cipher
+        .encrypt(&nonce, plaintext)
+        .map_err(|e| CafError::Vault(VaultError::Generic(format!("gagal enkripsi secret: {e}"))))?;
     let mut out = Vec::with_capacity(nonce.len() + ciphertext.len());
     out.extend_from_slice(&nonce);
     out.extend_from_slice(&ciphertext);
@@ -117,9 +117,7 @@ pub fn decrypt(local_key_hex: &str, encoded: &str) -> Result<SecretString, CafEr
         .ok_or_else(|| CafError::Vault(VaultError::Generic("unknown secret format".into())))?;
     let raw = base64::engine::general_purpose::STANDARD
         .decode(payload)
-        .map_err(|e| {
-            CafError::Vault(VaultError::Generic(format!("secret rusak (base64): {e}")))
-        })?;
+        .map_err(|e| CafError::Vault(VaultError::Generic(format!("secret rusak (base64): {e}"))))?;
     if raw.len() < 12 {
         return Err(CafError::Vault(VaultError::Generic(
             "secret rusak (terlalu pendek)".into(),
@@ -151,25 +149,21 @@ pub fn decrypt(local_key_hex: &str, encoded: &str) -> Result<SecretString, CafEr
 
 /// Hash a password or passphrase using Argon2id with strong parameters.
 pub fn hash_password(password: &str) -> Result<String, CafError> {
-    let params = Params::new(65536, 3, 4, Some(32)).map_err(|e| {
-        CafError::Vault(VaultError::Generic(format!("invalid argon2 params: {e}")))
-    })?;
+    let params = Params::new(65536, 3, 4, Some(32))
+        .map_err(|e| CafError::Vault(VaultError::Generic(format!("invalid argon2 params: {e}"))))?;
     let argon2 = Argon2::new(argon2::Algorithm::Argon2id, argon2::Version::V0x13, params);
     let salt = SaltString::generate(&mut ArgonOsRng);
     let password_hash = argon2
         .hash_password(password.as_bytes(), &salt)
-        .map_err(|e| {
-            CafError::Vault(VaultError::Generic(format!("failed to hash password: {e}")))
-        })?
+        .map_err(|e| CafError::Vault(VaultError::Generic(format!("failed to hash password: {e}"))))?
         .to_string();
     Ok(password_hash)
 }
 
 /// Verify a password against an Argon2id hash.
 pub fn verify_password(password: &str, hash: &str) -> Result<bool, CafError> {
-    let parsed_hash = PasswordHash::new(hash).map_err(|e| {
-        CafError::Vault(VaultError::Generic(format!("invalid hash format: {e}")))
-    })?;
+    let parsed_hash = PasswordHash::new(hash)
+        .map_err(|e| CafError::Vault(VaultError::Generic(format!("invalid hash format: {e}"))))?;
     Ok(Argon2::default()
         .verify_password(password.as_bytes(), &parsed_hash)
         .is_ok())

@@ -1,8 +1,8 @@
 //! HTTP Client for GCC Billing Hub endpoints.
 
-use super::state::{compute_effective_state, EffectiveState};
+use super::state::{EffectiveState, compute_effective_state};
 use super::store;
-use super::token::{verify_and_parse_token, EntitlementPayload};
+use super::token::{EntitlementPayload, verify_and_parse_token};
 use crate::error::{CafError, VaultError};
 use serde::{Deserialize, Serialize};
 
@@ -69,7 +69,10 @@ impl GccBillingClient {
 
     /// Step 1: Request OTP email
     pub fn request_otp(&self, email: &str) -> Result<(), CafError> {
-        let url = format!("{}/v1/auth/otp/request", self.config.gcc_base_url.trim_end_matches('/'));
+        let url = format!(
+            "{}/v1/auth/otp/request",
+            self.config.gcc_base_url.trim_end_matches('/')
+        );
         let body = serde_json::json!({
             "email": email,
             "product_code": self.config.product_code
@@ -99,7 +102,10 @@ impl GccBillingClient {
         device_id: &str,
         device_name: &str,
     ) -> Result<AuthResponse, CafError> {
-        let url = format!("{}/v1/auth/otp/verify", self.config.gcc_base_url.trim_end_matches('/'));
+        let url = format!(
+            "{}/v1/auth/otp/verify",
+            self.config.gcc_base_url.trim_end_matches('/')
+        );
         let body = serde_json::json!({
             "email": email,
             "otp_code": otp_code,
@@ -112,10 +118,9 @@ impl GccBillingClient {
             .send_json(&body)
             .map_err(|e| map_ureq_err("verify_otp", e))?;
 
-        let auth: AuthResponse = resp
-            .body_mut()
-            .read_json()
-            .map_err(|e| CafError::Vault(VaultError::Generic(format!("invalid JSON response: {e}"))))?;
+        let auth: AuthResponse = resp.body_mut().read_json().map_err(|e| {
+            CafError::Vault(VaultError::Generic(format!("invalid JSON response: {e}")))
+        })?;
 
         store::save_device_info(device_id, &auth.device_token)?;
         Ok(auth)
@@ -128,7 +133,10 @@ impl GccBillingClient {
         device_id: &str,
         device_name: &str,
     ) -> Result<AuthResponse, CafError> {
-        let url = format!("{}/v1/licenses/activate", self.config.gcc_base_url.trim_end_matches('/'));
+        let url = format!(
+            "{}/v1/licenses/activate",
+            self.config.gcc_base_url.trim_end_matches('/')
+        );
         let body = serde_json::json!({
             "license_key": license_key,
             "product_code": self.config.product_code,
@@ -140,10 +148,9 @@ impl GccBillingClient {
             .send_json(&body)
             .map_err(|e| map_ureq_err("activate_license", e))?;
 
-        let auth: AuthResponse = resp
-            .body_mut()
-            .read_json()
-            .map_err(|e| CafError::Vault(VaultError::Generic(format!("invalid JSON response: {e}"))))?;
+        let auth: AuthResponse = resp.body_mut().read_json().map_err(|e| {
+            CafError::Vault(VaultError::Generic(format!("invalid JSON response: {e}")))
+        })?;
 
         store::save_device_info(device_id, &auth.device_token)?;
         Ok(auth)
@@ -240,7 +247,10 @@ impl GccBillingClient {
             }
         };
 
-        let url = format!("{}/v1/checkout", self.config.gcc_base_url.trim_end_matches('/'));
+        let url = format!(
+            "{}/v1/checkout",
+            self.config.gcc_base_url.trim_end_matches('/')
+        );
         let body = serde_json::json!({ "plan_id": plan_id });
 
         let mut resp = ureq::post(&url)
@@ -285,7 +295,10 @@ impl GccBillingClient {
             None => return Ok(vec![]),
         };
 
-        let url = format!("{}/v1/devices", self.config.gcc_base_url.trim_end_matches('/'));
+        let url = format!(
+            "{}/v1/devices",
+            self.config.gcc_base_url.trim_end_matches('/')
+        );
         let mut resp = ureq::get(&url)
             .header("Authorization", format!("Bearer {}", device_token))
             .call()

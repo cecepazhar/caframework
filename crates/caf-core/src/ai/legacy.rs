@@ -304,10 +304,11 @@ pub fn scrub_text(text: &str) -> (String, usize) {
 }
 
 /// Preview context for current session with given privacy level
-pub fn preview_context_for_current_session(level: PrivacyLevel) -> Result<ContextPayload, CafError> {
-    let session = crate::session::get_current_session().unwrap_or_else(|_| {
-        crate::session::Session::new("default", "member")
-    });
+pub fn preview_context_for_current_session(
+    level: PrivacyLevel,
+) -> Result<ContextPayload, CafError> {
+    let session = crate::session::get_current_session()
+        .unwrap_or_else(|_| crate::session::Session::new("default", "member"));
     let cfg = get_stored_config()?;
     build_context(
         &session,
@@ -372,11 +373,9 @@ pub fn build_context(
                 .map_err(|e| CafError::Db(DbError::Generic(e.to_string())))?;
 
             let mut notes_text = String::new();
-            for r in rows {
-                if let Ok(entry) = r {
-                    notes_text.push_str(&entry);
-                    notes_text.push_str("\n\n");
-                }
+            for entry in rows.flatten() {
+                notes_text.push_str(&entry);
+                notes_text.push_str("\n\n");
             }
 
             let (scrubbed, count) = scrub_text(&notes_text);
@@ -412,11 +411,9 @@ pub fn build_context(
                 .map_err(|e| CafError::Db(DbError::Generic(e.to_string())))?;
 
             let mut notes_text = String::new();
-            for r in rows {
-                if let Ok(entry) = r {
-                    notes_text.push_str(&entry);
-                    notes_text.push_str("\n\n");
-                }
+            for entry in rows.flatten() {
+                notes_text.push_str(&entry);
+                notes_text.push_str("\n\n");
             }
 
             // In Full mode, still run basic scrubber for high sensitivity tokens

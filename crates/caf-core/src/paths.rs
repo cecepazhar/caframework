@@ -56,13 +56,13 @@ pub fn data_dir() -> Result<PathBuf, CafError> {
 }
 
 fn resolve_data_dir_with(env_override: Option<&str>) -> Result<DataDirInfo, CafError> {
-    if let Ok(lock) = CUSTOM_DATA_DIR.read() {
-        if let Some(ref dir) = *lock {
-            return Ok(DataDirInfo {
-                path: dir.clone(),
-                source: DataDirSource::EnvOverride,
-            });
-        }
+    if let Ok(lock) = CUSTOM_DATA_DIR.read()
+        && let Some(ref dir) = *lock
+    {
+        return Ok(DataDirInfo {
+            path: dir.clone(),
+            source: DataDirSource::EnvOverride,
+        });
     }
 
     if let Some(dir) = env_override {
@@ -136,14 +136,12 @@ pub fn device_id() -> Result<String, CafError> {
         }
     }
 
-    std::fs::create_dir_all(&dir).map_err(|e| {
-        CafError::Io(IoError::Generic(format!("failed to create data dir: {e}")))
-    })?;
+    std::fs::create_dir_all(&dir)
+        .map_err(|e| CafError::Io(IoError::Generic(format!("failed to create data dir: {e}"))))?;
 
     let new_id = uuid::Uuid::new_v4().to_string();
-    std::fs::write(&id_file, &new_id).map_err(|e| {
-        CafError::Io(IoError::Generic(format!("failed to write device id: {e}")))
-    })?;
+    std::fs::write(&id_file, &new_id)
+        .map_err(|e| CafError::Io(IoError::Generic(format!("failed to write device id: {e}"))))?;
 
     Ok(new_id)
 }

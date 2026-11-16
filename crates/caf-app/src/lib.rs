@@ -28,10 +28,11 @@ pub fn run() {
     run_with_start(std::time::Instant::now());
 }
 
+// Reason: Tauri entrypoint sets process-wide TLS environment variables, generates context macro, and initializes runtime loop
+#[allow(clippy::expect_used, clippy::disallowed_methods)]
 pub fn run_with_start(start: std::time::Instant) {
     caf_core::crash::install_panic_hook();
 
-    #[allow(clippy::expect_used, clippy::disallowed_methods)]
     let mut builder = tauri::Builder::default()
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_dialog::init())
@@ -66,21 +67,25 @@ pub fn run_with_start(start: std::time::Instant) {
                 // Fix for non-Debian distros (Fedora/Arch/RHEL): tauri-plugin-updater hardcodes
                 // /etc/ssl/certs/ca-certificates.crt which doesn't exist on Fedora. Sanitize it
                 // so child processes don't inherit a poisoned SSL_CERT_FILE.
-                if let Ok(cert) = std::env::var("SSL_CERT_FILE") {
-                    if !std::path::Path::new(&cert).exists() {
-                        let valid_ca = [
-                            "/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem",
-                            "/etc/pki/tls/cert.pem",
-                            "/etc/ssl/ca-bundle.pem",
-                            "/etc/ssl/cert.pem",
-                        ]
-                        .into_iter()
-                        .find(|p| std::path::Path::new(p).exists());
+                if let Ok(cert) = std::env::var("SSL_CERT_FILE")
+                    && !std::path::Path::new(&cert).exists()
+                {
+                    let valid_ca = [
+                        "/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem",
+                        "/etc/pki/tls/cert.pem",
+                        "/etc/ssl/ca-bundle.pem",
+                        "/etc/ssl/cert.pem",
+                    ]
+                    .into_iter()
+                    .find(|p| std::path::Path::new(p).exists());
 
-                        if let Some(valid) = valid_ca {
-                            unsafe { std::env::set_var("SSL_CERT_FILE", valid); }
-                        } else {
-                            unsafe { std::env::remove_var("SSL_CERT_FILE"); }
+                    if let Some(valid) = valid_ca {
+                        unsafe {
+                            std::env::set_var("SSL_CERT_FILE", valid);
+                        }
+                    } else {
+                        unsafe {
+                            std::env::remove_var("SSL_CERT_FILE");
                         }
                     }
                 }

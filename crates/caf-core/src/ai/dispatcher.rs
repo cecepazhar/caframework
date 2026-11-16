@@ -105,30 +105,27 @@ impl<'a> Dispatcher<'a> {
                 // If fallback provider configured, attempt fallback
                 if let (Some(fb_id), Some(fb_model)) =
                     (&rule.fallback_provider_id, &rule.fallback_model)
+                    && let Ok(Some(fallback_provider)) = get_provider(self.conn, fb_id)
+                    && fallback_provider.is_active
+                    && let Ok(content) = Self::execute_provider_call(
+                        &fallback_provider,
+                        fb_model,
+                        &assembled.system_prompt,
+                        &assembled.user_prompt,
+                        rule.temperature,
+                        rule.max_tokens,
+                        timeout,
+                    )
                 {
-                    if let Ok(Some(fallback_provider)) = get_provider(self.conn, fb_id) {
-                        if fallback_provider.is_active {
-                            if let Ok(content) = Self::execute_provider_call(
-                                &fallback_provider,
-                                fb_model,
-                                &assembled.system_prompt,
-                                &assembled.user_prompt,
-                                rule.temperature,
-                                rule.max_tokens,
-                                timeout,
-                            ) {
-                                return Ok(DispatchResult {
-                                    content,
-                                    provider_id: fallback_provider.id,
-                                    provider_type: fallback_provider.provider_type,
-                                    model: fb_model.clone(),
-                                    fell_back: true,
-                                    prompt_tokens: None,
-                                    completion_tokens: None,
-                                });
-                            }
-                        }
-                    }
+                    return Ok(DispatchResult {
+                        content,
+                        provider_id: fallback_provider.id,
+                        provider_type: fallback_provider.provider_type,
+                        model: fb_model.clone(),
+                        fell_back: true,
+                        prompt_tokens: None,
+                        completion_tokens: None,
+                    });
                 }
 
                 // If fallback failed or absent, return primary error
@@ -229,9 +226,10 @@ impl<'a> Dispatcher<'a> {
             .send_json(&payload)
             .map_err(|e| CafError::Ai(AiError::Generic(format!("Anthropic error: {e}"))))?;
 
-        let body = res.body_mut().read_to_string().map_err(|e| {
-            CafError::Ai(AiError::Generic(format!("Read Anthropic response: {e}")))
-        })?;
+        let body = res
+            .body_mut()
+            .read_to_string()
+            .map_err(|e| CafError::Ai(AiError::Generic(format!("Read Anthropic response: {e}"))))?;
 
         let parsed: Value = serde_json::from_str(&body)
             .map_err(|e| CafError::Ai(AiError::Generic(format!("Parse Anthropic JSON: {e}"))))?;

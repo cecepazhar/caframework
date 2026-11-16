@@ -20,6 +20,12 @@ pub struct ContextManager {
     registry: ContextRegistry,
 }
 
+impl Default for ContextManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ContextManager {
     pub fn new() -> Self {
         Self {
@@ -35,14 +41,14 @@ impl ContextManager {
     pub async fn aggregate_context(&self, scope: &VisibilityScope) -> String {
         let mut aggregated = String::new();
         for provider in &self.registry {
-            if let Ok(ctx) = provider.get_context(scope).await {
-                if !ctx.is_empty() {
-                    aggregated.push_str(&format!(
-                        "\n--- Provider: {} ---\n{}\n",
-                        provider.name(),
-                        ctx
-                    ));
-                }
+            if let Ok(ctx) = provider.get_context(scope).await
+                && !ctx.is_empty()
+            {
+                aggregated.push_str(&format!(
+                    "\n--- Provider: {} ---\n{}\n",
+                    provider.name(),
+                    ctx
+                ));
             }
         }
         aggregated

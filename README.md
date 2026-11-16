@@ -1,57 +1,83 @@
 # CAFramework
 
-Modern, sync-ready, multi-profile application starter framework for Desktop (Linux, macOS, Windows) and Mobile (Android).
+Starter template aplikasi desktop (Linux, macOS, Windows) dan mobile (Android) yang aman, modular, dan siap sinkronisasi. Dibuat dengan **Rust (edisi 2024)**, **Tauri 2**, **SQLCipher (Argon2id)**, **Svelte 5**, dan **Tailwind CSS 4**.
 
-Built with **Rust (Edition 2024)**, **Tauri v2**, **SQLCipher (Argon2id)**, **Svelte 5 Runes**, and **Tailwind CSS v4**.
+CAFramework bersifat **generik**. Aplikasi baru (keuangan, kantor, inventori, catatan, dan lainnya) dibuat dari satu berkas `app.toml`, jadi framework ini dirancang untuk diduplikasi ke banyak produk.
 
----
-
-## ✨ Features
-- 🔒 **SQLCipher Encrypted Local Storage** with Argon2id Master Key & PIN hashing.
-- 👥 **Multi-Profile Architecture** with roles, ownership, and visibility access control.
-- 🔄 **Sync-Ready Generic Schema** (UUIDv7, integer `rev`, automatic `change_log` audit triggers).
-- ⚡ **Svelte 5 Runes Frontend** with instant reactivity, dark mode, dynamic accent colors.
-- 🤖 **Generic AI Assistant Slice** with privacy regex scrubber (`[REDACTED_EMAIL]`, `[REDACTED_ACCOUNT]`).
-- 🛠️ **`cargo xtask` Tooling**: Single manifest `app.toml` drives identity, navigation codegen, and `new-app` scaffolding.
-- 📱 **Android Ready** with complete mobile documentation and signing guides.
+> **Status: pra-rilis (`v0.1.0-dev`).** Jangan menganggap sebuah fitur sudah siap produksi sebelum [`STATUS.md`](STATUS.md) menyatakannya terverifikasi.
 
 ---
 
-## 🚀 Quick Start
+## Yang ditawarkan (target v0.1.0)
 
-### 1. Requirements
-- Rust 1.85+ (Edition 2024)
-- Node.js 20+ & npm
+- Penyimpanan lokal terenkripsi SQLCipher dengan kunci dari Argon2id, dan recovery code 24 kata.
+- Multi-profil dengan PIN, peran (RBAC), kepemilikan, dan visibilitas data.
+- Skema siap sinkronisasi (UUIDv7, `rev`, tombstone, `change_log`). Mesin sinkronisasi belum ada.
+- Backup terenkripsi (wajib) dan import/export data per entitas (CSV, XLSX, JSON).
+- Integrasi API dengan adapter server lisensi, penjadwal tugas, dan paket Pro dengan pembatasan fitur.
+- Asisten AI dengan tingkat privasi dan penyamaran data pribadi.
+- Antarmuka Svelte 5 dengan tema gelap dan terang, aksen yang bisa diganti, dan terjemahan Indonesia/Inggris.
+- Generator `cargo xtask new-app` dan wizard (dalam pengerjaan).
 
-### 2. Setup & Development
+Detail dan status per fitur: [`STATUS.md`](STATUS.md) dan [`docs/01-architecture.md`](docs/01-architecture.md).
+
+---
+
+## Mulai cepat
+
+### Prasyarat
+- Rust toolchain `1.98.1` (dipasang otomatis oleh rustup dari `rust-toolchain.toml`)
+- Node.js LTS dan npm
+- Linux: paket dev WebKitGTK 4.1 dan GTK 3 (lihat [`docs/03-duplicating-to-a-product.md`](docs/03-duplicating-to-a-product.md#2-prasyarat))
+
+### Jalankan untuk pengembangan
+
 ```bash
-# Clone repository
 git clone https://github.com/cecepazhar/caframework.git
 cd caframework
 
-# Run Codegen
-cargo run --package caf-xtask -- codegen
+# Gunakan data sementara agar tidak menyentuh data asli
+export CAF_DATA_DIR="$(mktemp -d)"
 
-# Build & run in dev mode
+cargo run -p caf-xtask -- codegen
 cargo tauri dev
 ```
 
-### 3. Generate New Derivative App
+### Buat produk turunan
+
 ```bash
-cargo run --package caf-xtask -- new-app --config my-app.toml --out ~/Project/my-app
+cargo run -p caf-xtask -- check --config my-product.toml
+cargo run -p caf-xtask -- new-app --config my-product.toml --out ~/Project/my-product --dry-run
+cargo run -p caf-xtask -- new-app --config my-product.toml --out ~/Project/my-product
 ```
 
----
+> **Catatan.** `check` saat ini masih membaca skema `app.toml` lama (lihat `app.toml` di root). Skema v2.0 di dokumentasi adalah target dan belum diterima kode. Lihat [`STATUS.md`](STATUS.md).
 
-## 📖 Documentation
-- [Architecture Overview](docs/architecture.md)
-- [Creating a New App](docs/creating-an-app.md)
-- [Adding a New Menu / Slice](docs/adding-a-menu.md)
-- [Android Build & Signing Guide](docs/android-build-guide.md)
-- [Error Codes Taxonomy](docs/error-codes.md)
+Panduan lengkap: [`docs/03-duplicating-to-a-product.md`](docs/03-duplicating-to-a-product.md).
 
 ---
 
-## 📄 License & Attribution
-CAFramework is open-source under the [MIT License](LICENSE).
-See [NOTICE](NOTICE) for original project attribution.
+## Dokumentasi
+
+Indeks lengkap: [`docs/README.md`](docs/README.md).
+
+| Dokumen | Isi |
+|---|---|
+| [`AGENTS.md`](AGENTS.md) | Aturan untuk AI agent dan kontributor |
+| [`docs/03-duplicating-to-a-product.md`](docs/03-duplicating-to-a-product.md) | Membuat produk baru dari framework |
+| [`docs/04-app-toml-reference.md`](docs/04-app-toml-reference.md) | Referensi `app.toml` |
+| [`docs/01-architecture.md`](docs/01-architecture.md) | Arsitektur |
+| [`docs/02-security.md`](docs/02-security.md) | Model keamanan |
+| [`docs/06-adding-a-menu.md`](docs/06-adding-a-menu.md) | Menambah halaman |
+| [`docs/10-android-build-guide.md`](docs/10-android-build-guide.md) | Build Android |
+
+---
+
+## Kontribusi dan keamanan
+
+- [`CONTRIBUTING.md`](CONTRIBUTING.md)
+- [`SECURITY.md`](SECURITY.md) — laporkan kerentanan secara privat
+
+## Lisensi
+
+MIT. Lihat [`LICENSE`](LICENSE). Atribusi proyek asal ada di [`NOTICE`](NOTICE).

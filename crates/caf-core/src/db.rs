@@ -8,9 +8,8 @@ use std::path::Path;
 /// Opens (creating if absent) the SQLCipher-encrypted database at `<data_dir>/caframework.db`,
 /// keys it with `passphrase`, and ensures the schema exists.
 pub fn open_encrypted(data_dir: &Path, passphrase: &str) -> Result<Connection, CafError> {
-    std::fs::create_dir_all(data_dir).map_err(|e| {
-        CafError::Db(DbError::Generic(format!("failed to create data dir: {e}")))
-    })?;
+    std::fs::create_dir_all(data_dir)
+        .map_err(|e| CafError::Db(DbError::Generic(format!("failed to create data dir: {e}"))))?;
     let db_path = crate::paths::db_path(data_dir);
 
     let conn = if let Some(raw_key) = raw_key_literal(passphrase) {

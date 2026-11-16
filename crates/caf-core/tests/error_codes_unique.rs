@@ -31,16 +31,19 @@ fn no_duplicate_error_codes() {
 #[test]
 fn error_codes_md_matches_generated_source() {
     let generated = caf_core::CafError::generate_registry_markdown();
-    let doc_path = workspace_root().join("docs").join("error-codes.md");
+    let mut doc_path = workspace_root().join("docs").join("08-error-codes.md");
+    if !doc_path.exists() {
+        doc_path = workspace_root().join("docs").join("error-codes.md");
+    }
 
     if std::env::var("UPDATE_GOLDEN").is_ok() {
         std::fs::create_dir_all(doc_path.parent().expect("docs dir")).expect("mkdir docs/");
-        std::fs::write(&doc_path, &generated).expect("gagal menulis docs/error-codes.md");
+        std::fs::write(&doc_path, &generated).expect("gagal menulis docs/08-error-codes.md");
     }
 
     let existing = std::fs::read_to_string(&doc_path).unwrap_or_default();
     assert_eq!(
         existing, generated,
-        "docs/error-codes.md basi dari src/error.rs — jalankan ulang dengan UPDATE_GOLDEN=1"
+        "docs/08-error-codes.md basi dari src/error.rs — jalankan ulang dengan UPDATE_GOLDEN=1"
     );
 }

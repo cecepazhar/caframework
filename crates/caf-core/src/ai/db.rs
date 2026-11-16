@@ -42,10 +42,8 @@ pub fn get_providers(conn: &Connection) -> Result<Vec<AiProviderConfig>, CafErro
         .map_err(|e| CafError::Db(DbError::Generic(format!("execute providers query: {e}"))))?;
 
     let mut list = Vec::new();
-    for r in rows {
-        if let Ok(item) = r {
-            list.push(item);
-        }
+    for item in rows.flatten() {
+        list.push(item);
     }
     Ok(list)
 }
@@ -158,10 +156,8 @@ pub fn get_routing_matrix(conn: &Connection) -> Result<Vec<TaskRouteRule>, CafEr
         .map_err(|e| CafError::Db(DbError::Generic(format!("execute matrix query: {e}"))))?;
 
     let mut list = Vec::new();
-    for r in rows {
-        if let Ok(item) = r {
-            list.push(item);
-        }
+    for item in rows.flatten() {
+        list.push(item);
     }
     Ok(list)
 }
@@ -253,10 +249,8 @@ pub fn get_personas(conn: &Connection) -> Result<Vec<SystemPersona>, CafError> {
         .map_err(|e| CafError::Db(DbError::Generic(format!("execute personas query: {e}"))))?;
 
     let mut list = Vec::new();
-    for r in rows {
-        if let Ok(item) = r {
-            list.push(item);
-        }
+    for item in rows.flatten() {
+        list.push(item);
     }
     Ok(list)
 }
@@ -411,10 +405,8 @@ pub fn get_habits(conn: &Connection) -> Result<Vec<HabitFact>, CafError> {
         .map_err(|e| CafError::Db(DbError::Generic(format!("execute habits query: {e}"))))?;
 
     let mut list = Vec::new();
-    for r in rows {
-        if let Ok(item) = r {
-            list.push(item);
-        }
+    for item in rows.flatten() {
+        list.push(item);
     }
     Ok(list)
 }
@@ -560,10 +552,8 @@ pub fn search_relevant_habits(
             })?;
 
         let mut results = Vec::new();
-        for r in rows {
-            if let Ok(item) = r {
-                results.push(item);
-            }
+        for item in rows.flatten() {
+            results.push(item);
         }
         return Ok(results);
     }
@@ -602,10 +592,8 @@ pub fn search_relevant_habits(
     match rows {
         Ok(mapped) => {
             let mut results = Vec::new();
-            for r in mapped {
-                if let Ok(item) = r {
-                    results.push(item);
-                }
+            for item in mapped.flatten() {
+                results.push(item);
             }
             if !results.is_empty() {
                 return Ok(results);
@@ -649,10 +637,8 @@ pub fn search_relevant_habits(
         .map_err(|e| CafError::Db(DbError::Generic(format!("execute like query: {e}"))))?;
 
     let mut results = Vec::new();
-    for r in rows {
-        if let Ok(item) = r {
-            results.push(item);
-        }
+    for item in rows.flatten() {
+        results.push(item);
     }
     Ok(results)
 }
@@ -696,18 +682,13 @@ pub fn get_skills(conn: &Connection) -> Result<Vec<CustomSkill>, CafError> {
         .map_err(|e| CafError::Db(DbError::Generic(format!("execute skills query: {e}"))))?;
 
     let mut list = Vec::new();
-    for r in rows {
-        if let Ok(item) = r {
-            list.push(item);
-        }
+    for item in rows.flatten() {
+        list.push(item);
     }
     Ok(list)
 }
 
-pub fn get_skill_by_name(
-    conn: &Connection,
-    name: &str,
-) -> Result<Option<CustomSkill>, CafError> {
+pub fn get_skill_by_name(conn: &Connection, name: &str) -> Result<Option<CustomSkill>, CafError> {
     let mut stmt = conn
         .prepare(
             "SELECT id, name, title, description, category, triggers_json,

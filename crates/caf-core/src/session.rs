@@ -44,8 +44,7 @@ pub fn get_current_session() -> Result<Session, CafError> {
     let lock = CURRENT_SESSION
         .read()
         .map_err(|_| CafError::Auth(AuthError::Unauthorized))?;
-    lock.clone()
-        .ok_or_else(|| CafError::Auth(AuthError::Unauthorized))
+    lock.clone().ok_or(CafError::Auth(AuthError::Unauthorized))
 }
 
 pub fn set_current_session(session: Session) -> Result<(), CafError> {
@@ -76,13 +75,13 @@ impl SessionManager {
     pub fn get(&self) -> Result<&Session, CafError> {
         self.active_session
             .as_ref()
-            .ok_or_else(|| CafError::Auth(AuthError::Unauthorized))
+            .ok_or(CafError::Auth(AuthError::Unauthorized))
     }
 
     pub fn get_mut(&mut self) -> Result<&mut Session, CafError> {
         self.active_session
             .as_mut()
-            .ok_or_else(|| CafError::Auth(AuthError::Unauthorized))
+            .ok_or(CafError::Auth(AuthError::Unauthorized))
     }
 }
 

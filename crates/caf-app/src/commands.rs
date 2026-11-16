@@ -156,10 +156,14 @@ pub async fn ai_chat(
     consent_given: Option<bool>,
 ) -> Result<ai::AiChatResponse, CafError> {
     run_blocking(move || {
-        let session = caf_core::session::get_current_session().unwrap_or_else(|_| {
-            caf_core::session::Session::new("default", "member")
-        });
-        ai::chat(&session, &prompt, privacy_level, consent_given.unwrap_or(false))
+        let session = caf_core::session::get_current_session()
+            .unwrap_or_else(|_| caf_core::session::Session::new("default", "member"));
+        ai::chat(
+            &session,
+            &prompt,
+            privacy_level,
+            consent_given.unwrap_or(false),
+        )
     })
     .await
 }
@@ -210,7 +214,10 @@ pub async fn ai_get_habits() -> Result<Vec<ai::HabitFact>, CafError> {
 }
 
 #[tauri::command]
-pub async fn ai_search_habits(query: String, limit: Option<usize>) -> Result<Vec<ai::HabitFact>, CafError> {
+pub async fn ai_search_habits(
+    query: String,
+    limit: Option<usize>,
+) -> Result<Vec<ai::HabitFact>, CafError> {
     run_blocking(move || ai::search_habit_memories(&query, limit.unwrap_or(20))).await
 }
 

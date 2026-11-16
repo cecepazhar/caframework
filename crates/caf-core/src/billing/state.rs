@@ -67,31 +67,31 @@ pub fn compute_effective_state(
     }
 
     // Rule 5: Clock rollback detection
-    if let Some(max_time) = max_seen_time {
-        if now_unix + CLOCK_ROLLBACK_TOLERANCE_SECS < max_time {
-            return EffectiveState {
-                tier: EffectiveTier::FreeNeedsOnlineCheck,
-                billing_type: payload.billing_type.clone(),
-                is_pro: false,
-                expires_at: payload.expires_at.clone(),
-                grace_until: payload.grace_until.clone(),
-                warning: Some("Clock rollback detected. Please reconnect online.".into()),
-            };
-        }
+    if let Some(max_time) = max_seen_time
+        && now_unix + CLOCK_ROLLBACK_TOLERANCE_SECS < max_time
+    {
+        return EffectiveState {
+            tier: EffectiveTier::FreeNeedsOnlineCheck,
+            billing_type: payload.billing_type.clone(),
+            is_pro: false,
+            expires_at: payload.expires_at.clone(),
+            grace_until: payload.grace_until.clone(),
+            warning: Some("Clock rollback detected. Please reconnect online.".into()),
+        };
     }
 
     // Rule 4: Offline allowance limit (7 days)
-    if let Some(verified_at) = last_verified_at {
-        if now_unix > verified_at + OFFLINE_LIMIT_SECS {
-            return EffectiveState {
-                tier: EffectiveTier::FreeNeedsOnlineCheck,
-                billing_type: payload.billing_type.clone(),
-                is_pro: false,
-                expires_at: payload.expires_at.clone(),
-                grace_until: payload.grace_until.clone(),
-                warning: Some("Offline allowance exceeded (7 days). Please reconnect online.".into()),
-            };
-        }
+    if let Some(verified_at) = last_verified_at
+        && now_unix > verified_at + OFFLINE_LIMIT_SECS
+    {
+        return EffectiveState {
+            tier: EffectiveTier::FreeNeedsOnlineCheck,
+            billing_type: payload.billing_type.clone(),
+            is_pro: false,
+            expires_at: payload.expires_at.clone(),
+            grace_until: payload.grace_until.clone(),
+            warning: Some("Offline allowance exceeded (7 days). Please reconnect online.".into()),
+        };
     }
 
     // Rule 6: Lifetime or Timed Entitlement check

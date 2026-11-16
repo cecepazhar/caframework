@@ -33,11 +33,7 @@ pub(crate) fn mask_secrets(text: &str) -> String {
     re.replace_all(text, "$1$2***").to_string()
 }
 
-pub fn log_event(
-    event_type: &str,
-    host_id: Option<&str>,
-    details: &str,
-) -> Result<(), CafError> {
+pub fn log_event(event_type: &str, host_id: Option<&str>, details: &str) -> Result<(), CafError> {
     let conn = crate::db::open()?;
     let id = uuid::Uuid::new_v4().to_string();
     let timestamp = chrono::Utc::now().timestamp_millis();

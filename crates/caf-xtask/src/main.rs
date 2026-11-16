@@ -139,18 +139,14 @@ fn load_config(path: &Path) -> Result<AppConfig, Box<dyn std::error::Error>> {
         return Err("app.toml must contain at least one menu entry".into());
     }
     if let Some(ref b) = cfg.billing {
-        if b.enabled {
-            if b.product_code.trim().is_empty() {
-                return Err(
-                    "[billing] product_code cannot be empty when billing is enabled".into(),
-                );
-            }
-            if b.public_keys.is_empty() {
-                return Err(
-                    "[billing] public_keys must contain at least one key when billing is enabled"
-                        .into(),
-                );
-            }
+        if b.enabled && b.product_code.trim().is_empty() {
+            return Err("[billing] product_code cannot be empty when billing is enabled".into());
+        }
+        if b.enabled && b.public_keys.is_empty() {
+            return Err(
+                "[billing] public_keys must contain at least one key when billing is enabled"
+                    .into(),
+            );
         }
     }
     Ok(cfg)

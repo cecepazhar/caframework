@@ -11,6 +11,9 @@ fn get_workspace_root() -> PathBuf {
 }
 
 fn bin_path() -> PathBuf {
+    if let Ok(p) = std::env::var("CARGO_BIN_EXE_caf-xtask") {
+        return PathBuf::from(p);
+    }
     let mut p = get_workspace_root();
     p.push("target");
     p.push("debug");

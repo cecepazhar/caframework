@@ -1,0 +1,122 @@
+# Contoh app.toml untuk CAFramework (kontrak FR-1 di PRD v2.0).
+# Salin file ini, ganti nilai sesuai produk Anda, lalu jalankan:
+#   cargo run -p caf-xtask -- check --config <file-ini>
+# CATATAN: skema ini adalah target PRD v2.0. `check` saat ini masih memakai skema lama
+# dan akan menolak berkas ini sampai paket kerja W03 selesai (lihat docs/04-app-toml-reference.md).
+# Setiap nilai di [brand] wajib diganti dengan data Anda sendiri.
+
+[app]
+name = "Contoh App"
+slug = "contohapp"                   # huruf kecil, tanda hubung; dipakai untuk nama paket dan folder data
+code = "CNT"                         # 2–6 huruf kapital; prefix error, mis. CNT-VAULT-001
+identifier = "com.example.contohapp" # reverse-DNS, unik untuk produk Anda
+accent = "emerald"                   # violet sky emerald amber rose cyan indigo teal orange pink
+default_locale = "id"
+locales = ["id", "en"]
+platforms = ["linux", "windows", "macos", "android"]
+caframework_version = "0.1.0"        # diisi generator; ditulis di sini sebagai referensi
+
+[brand]                              # WAJIB
+developer = "Nama Developer Anda"
+company = ""                         # opsional
+website = "https://example.com"
+email = "hello@example.com"
+phone = "+6200000000000"             # format E.164
+support_url = ""                     # opsional; kosong = pakai website
+copyright = "© {year} Nama Developer Anda"
+logo = "assets/logo.svg"
+show_on_lock_screen = true
+
+[window]                             # opsional
+width = 1200
+height = 800
+min_width = 900
+min_height = 600
+resizable = true
+
+[modules]
+profiles = true
+ai = true
+pro = true                           # selalu dibangkitkan; false hanya menyembunyikan UI Pro
+feedback = true
+updater = true
+crash = true
+integrations = true
+scheduler = true
+support_page = false
+# backup dan import/export selalu aktif dan tidak boleh ditulis di sini
+
+[rbac]
+super_role = "super_admin"
+allow_runtime_roles = true
+
+[[rbac.roles]]
+key = "super_admin"
+label_en = "Super admin"
+label_id = "Super admin"
+permissions = ["*"]
+
+[[rbac.roles]]
+key = "admin"
+label_en = "Admin"
+label_id = "Admin"
+permissions = ["notes:*", "users:view", "backup:export", "data:export", "scheduler:view"]
+
+[[rbac.roles]]
+key = "member"
+label_en = "Member"
+label_id = "Anggota"
+permissions = ["notes:view", "notes:create", "notes:update", "notes:delete"]
+
+[[rbac.roles]]
+key = "viewer"
+label_en = "Viewer"
+label_id = "Pengamat"
+permissions = ["notes:view"]
+
+[profiles]
+pin_required_for = ["super_admin", "admin", "member"]
+age_stages = []                      # opsional, mis. [{ key = "anak", min_age = 6, max_age = 12 }]
+
+[endpoints]                          # kosong = fitur jaringan nonaktif saat build
+gcc_base_url = ""
+updater_manifest_url = ""
+
+[pro]
+gcc_product_id = ""                  # kosong = server lisensi belum dikonfigurasi
+trial_days = 14
+device_limit = 3
+offline_grace_days = 7
+refresh_hours = 6
+currencies = ["IDR", "USD"]
+
+[pro.features]                       # "free" atau "pro"
+ai_assistant = "pro"
+scheduled_backup = "free"
+data_export_xlsx = "pro"
+
+[[integrations]]
+key = "gcc"
+kind = "gcc"                         # gcc | rest
+base_url_from = "endpoints.gcc_base_url"
+
+[[jobs]]
+key = "backup.scheduled"
+schedule = "0 2 * * 1"               # cron 5 kolom (waktu lokal), atau: hourly | daily | weekly | monthly
+enabled = true
+
+[[entities]]                         # daftar tabel untuk import/export
+key = "notes"
+label_en = "Notes"
+label_id = "Catatan"
+natural_key = []
+formats = ["csv", "xlsx", "json"]
+
+[[menus]]
+key = "notes"
+label_en = "Notes"
+label_id = "Catatan"
+icon = "M3 7h18M3 12h18M3 17h18"     # path SVG 24x24 (garis)
+accent = ""                          # kosong = pakai aksen aplikasi
+group = "daily"
+permission = "notes:view"

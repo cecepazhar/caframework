@@ -11,6 +11,9 @@ fn get_workspace_root() -> PathBuf {
 }
 
 fn bin_path() -> PathBuf {
+    if let Ok(p) = std::env::var("CARGO_BIN_EXE_caf-xtask") {
+        return PathBuf::from(p);
+    }
     let mut p = get_workspace_root();
     p.push("target");
     p.push("debug");
@@ -74,4 +77,117 @@ fn test_guard_fails_on_bad_fixtures() {
         .output()
         .expect("Failed to run caf-xtask guard");
     assert!(output.status.success());
+}
+
+#[test]
+fn test_repository_hygiene_fails_on_bad_fixtures() {
+    let temp_root = std::env::temp_dir().join(format!("caf_hygiene_test_{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&temp_root);
+    std::fs::create_dir_all(&temp_root).expect("create temp fixture dir");
+
+    struct Cleanup(PathBuf);
+    impl Drop for Cleanup {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+    let _cleanup = Cleanup(temp_root.clone());
+
+    // 1. Create a 2 MB file (oversized)
+    let large_file = temp_root.join("huge_blob.bin");
+    let two_mb = vec![1u8; 2 * 1024 * 1024];
+    std::fs::write(&large_file, two_mb).expect("write large file");
+
+    // 2. Create a dummy vault.key file (forbidden key extension)
+    let dummy_key = temp_root.join("vault.key");
+    std::fs::write(&dummy_key, "0123456789abcdef0123456789abcdef").expect("write dummy key");
+
+    // 3. Create a dummy task.md (internal plan inside repository)
+    let plan_file = temp_root.join("task.md");
+    std::fs::write(&plan_file, "# Plan inside repo").expect("write plan file");
+
+    let output = Command::new(bin_path())
+        .args(["guard", "--only", "repository_hygiene"])
+        .env("CAF_GUARD_ROOT", &temp_root)
+        .current_dir(&temp_root)
+        .output()
+        .expect("Failed to run caf-xtask guard");
+
+    assert!(
+        !output.status.success(),
+        "Guard must exit non-zero when fixture tree has 2MB file and dummy vault.key"
+    );
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    println!("Failing fixture output:\n{}", stderr);
+
+    assert!(
+        stderr.contains("Tracked file is over 1MB") || stderr.contains("1048576"),
+        "Must flag >1MB file in fixture: {stderr}"
+    );
+    assert!(
+        stderr.contains("forbidden key"),
+        "Must flag vault.key in fixture: {stderr}"
+    );
+    assert!(
+        stderr.contains("internal notes/plans"),
+        "Must flag task.md in fixture: {stderr}"
+    );
+}
+
+#[test]
+fn test_ledger_guard_fails_on_tamper() {
+    let temp_root =
+        std::env::temp_dir().join(format!("caf_ledger_guard_test_{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&temp_root);
+    std::fs::create_dir_all(&temp_root).expect("create temp fixture dir");
+
+    struct Cleanup(PathBuf);
+    impl Drop for Cleanup {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+    let _cleanup = Cleanup(temp_root.clone());
+
+    // 1. Valid task.md
+    let task_content = "\
+# Task Plan
+**P00.1 Original Title**
+**P00.2 Second Task**
+";
+    std::fs::write(temp_root.join("task.md"), task_content).expect("write task.md");
+
+    // 2. Tampered ledger-v3.md (P00.1 renamed, P00.2 marked DONE without evidence)
+    let bad_ledger = "\
+# Ledger
+| Task | Title | Status | Evidence anchor |
+|---|---|---|---|
+| P00.1 | Renamed Fake Title | DONE | |
+| P00.2 | Second Task | DONE | P00.md#p002 |
+";
+    std::fs::write(temp_root.join("ledger-v3.md"), bad_ledger).expect("write bad ledger");
+
+    let output = Command::new(bin_path())
+        .args(["guard", "--only", "ledger"])
+        .env("CAF_PLAN_DIR", &temp_root)
+        .output()
+        .expect("Failed to run caf-xtask guard");
+
+    assert!(
+        !output.status.success(),
+        "Ledger guard must fail on renamed task or missing evidence file"
+    );
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    println!("Ledger failing fixture output:\n{}", stderr);
+
+    assert!(
+        stderr.contains("title mismatch"),
+        "Must detect title mismatch: {stderr}"
+    );
+    assert!(
+        stderr.contains("without evidence anchor") || stderr.contains("does not exist"),
+        "Must detect missing evidence anchor/file: {stderr}"
+    );
 }
