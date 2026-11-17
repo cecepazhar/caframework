@@ -30,7 +30,10 @@ pub struct IntegrationRequestLogRecord {
 use std::sync::LazyLock;
 
 static QUERY_SECRET_RE: LazyLock<Option<Regex>> = LazyLock::new(|| {
-    Regex::new(r"(?i)([?&](?:api_key|token|secret|key|password|access_token|code|client_secret)=)([^&]+)").ok()
+    Regex::new(
+        r"(?i)([?&](?:api_key|token|secret|key|password|access_token|code|client_secret)=)([^&]+)",
+    )
+    .ok()
 });
 
 pub fn redact_path_and_query(path_or_url: &str) -> String {

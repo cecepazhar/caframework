@@ -84,11 +84,12 @@ pub fn list_integrations() -> Result<Vec<IntegrationStatusDto>, CafError> {
 }
 
 pub async fn test_integration_connection(key: &str) -> Result<TestConnectionResult, CafError> {
-    let connector = get_connector(key)
-        .ok_or(CafError::Http(HttpError::Network))?;
+    let connector = get_connector(key).ok_or(CafError::Http(HttpError::Network))?;
 
     let start = std::time::Instant::now();
-    let res = connector.request("GET", "/", HashMap::new(), None, None).await;
+    let res = connector
+        .request("GET", "/", HashMap::new(), None, None)
+        .await;
     let duration_ms = start.elapsed().as_millis() as u64;
 
     match res {
@@ -114,7 +115,10 @@ pub async fn flush_outbox() -> Result<FlushSummary, CafError> {
 
         let mut headers = HashMap::new();
         headers.insert("Content-Type".to_string(), "application/json".to_string());
-        headers.insert("X-Idempotency-Key".to_string(), item.idempotency_key.clone());
+        headers.insert(
+            "X-Idempotency-Key".to_string(),
+            item.idempotency_key.clone(),
+        );
 
         match connector
             .request(

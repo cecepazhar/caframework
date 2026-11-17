@@ -169,9 +169,8 @@ impl GccAdapter {
             )
             .await?;
 
-        if resp.status == 200 {
-            serde_json::from_slice(&resp.body)
-                .map_err(|_| CafError::Http(HttpError::Network))
+        if resp.status == 200 || resp.status == 201 {
+            serde_json::from_slice(&resp.body).map_err(|_| CafError::Http(HttpError::Network))
         } else {
             Err(CafError::Http(HttpError::HttpStatus))
         }
@@ -201,9 +200,8 @@ impl GccAdapter {
             )
             .await?;
 
-        if resp.status == 200 {
-            serde_json::from_slice(&resp.body)
-                .map_err(|_| CafError::Http(HttpError::Network))
+        if resp.status == 200 || resp.status == 201 {
+            serde_json::from_slice(&resp.body).map_err(|_| CafError::Http(HttpError::Network))
         } else {
             Err(CafError::Http(HttpError::HttpStatus))
         }
@@ -235,12 +233,17 @@ impl GccAdapter {
     pub async fn get_plans(&self) -> Result<Vec<GccPlanItem>, CafError> {
         let resp = self
             .connector
-            .request("GET", "/v1/plans", self.standard_headers(None), None, None)
+            .request(
+                "GET",
+                &format!("/v1/plans?product_code={}", self.app_id),
+                self.standard_headers(None),
+                None,
+                None,
+            )
             .await?;
 
-        if resp.status == 200 {
-            serde_json::from_slice(&resp.body)
-                .map_err(|_| CafError::Http(HttpError::Network))
+        if resp.status == 200 || resp.status == 201 {
+            serde_json::from_slice(&resp.body).map_err(|_| CafError::Http(HttpError::Network))
         } else {
             Err(CafError::Http(HttpError::HttpStatus))
         }
@@ -249,6 +252,7 @@ impl GccAdapter {
     /// Create checkout session
     pub async fn create_checkout(
         &self,
+        device_token: &str,
         plan_id: &str,
         email: &str,
     ) -> Result<GccCheckoutResponse, CafError> {
@@ -264,15 +268,14 @@ impl GccAdapter {
             .request(
                 "POST",
                 "/v1/checkout",
-                self.standard_headers(None),
+                self.standard_headers(Some(device_token)),
                 Some(payload.into_bytes()),
                 None,
             )
             .await?;
 
-        if resp.status == 200 {
-            serde_json::from_slice(&resp.body)
-                .map_err(|_| CafError::Http(HttpError::Network))
+        if resp.status == 200 || resp.status == 201 {
+            serde_json::from_slice(&resp.body).map_err(|_| CafError::Http(HttpError::Network))
         } else {
             Err(CafError::Http(HttpError::HttpStatus))
         }
@@ -291,9 +294,8 @@ impl GccAdapter {
             )
             .await?;
 
-        if resp.status == 200 {
-            serde_json::from_slice(&resp.body)
-                .map_err(|_| CafError::Http(HttpError::Network))
+        if resp.status == 200 || resp.status == 201 {
+            serde_json::from_slice(&resp.body).map_err(|_| CafError::Http(HttpError::Network))
         } else {
             Err(CafError::Http(HttpError::HttpStatus))
         }
@@ -316,7 +318,7 @@ impl GccAdapter {
             )
             .await?;
 
-        if resp.status == 200 {
+        if resp.status == 200 || resp.status == 204 {
             Ok(())
         } else {
             Err(CafError::Http(HttpError::HttpStatus))

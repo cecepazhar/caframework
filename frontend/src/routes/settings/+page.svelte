@@ -15,6 +15,19 @@
     type JobRunRecord,
     type SchedulerDesktopSettings
   } from '$lib/api/scheduler';
+  import {
+    listIntegrations,
+    setIntegrationSecret,
+    deleteIntegrationSecret,
+    testIntegrationConnection,
+    getIntegrationLogs,
+    getOutboxItems,
+    flushOutboxNow,
+    type IntegrationStatusDto,
+    type TestConnectionResult,
+    type IntegrationRequestLogRecord,
+    type OutboxItem
+  } from '$lib/api/integrations';
   import AiSettingsForm from '$lib/components/AiSettingsForm.svelte';
   import ProfileAvatar from '$lib/components/ProfileAvatar.svelte';
   import AvatarPicker from '$lib/components/AvatarPicker.svelte';
@@ -195,7 +208,7 @@
     t('settings.subscription.featureCommunity')
   ]);
 
-  const TABS = ['profile', 'updates', 'ai', 'subscription', 'security', 'backup', 'schedules', 'performance', 'shortcuts'] as const;
+  const TABS = ['profile', 'updates', 'ai', 'subscription', 'security', 'backup', 'schedules', 'integrations', 'performance', 'shortcuts'] as const;
   type SettingsTab = (typeof TABS)[number];
   // `?tab=` lets the profile menu deep-link straight to a tab.
   const requestedTab = page.url.searchParams.get('tab') ?? '';
@@ -440,6 +453,90 @@
       await setDesktopSettings(desktopSettings);
     } catch (err: any) {
       showToast(errorText(err), 'error');
+    }
+  }
+
+  // Integrations state & handlers (P09)
+  let integrationsList = $state<IntegrationStatusDto[]>([]);
+  let outboxItems = $state<OutboxItem[]>([]);
+  let requestLogs = $state<IntegrationRequestLogRecord[]>([]);
+  let editingSecretKey = $state<string | null>(null);
+  let secretInputVal = $state('');
+  let testingKey = $state<string | null>(null);
+  let isFlushingOutbox = $state(false);
+
+  async function loadIntegrations() {
+    try {
+      integrationsList = await listIntegrations();
+      outboxItems = await getOutboxItems(null, 50);
+      requestLogs = await getIntegrationLogs(null, 50);
+    } catch {
+      // silent catch if not permitted or locked
+    }
+  }
+
+  $effect(() => {
+    if (activeTab === 'integrations') {
+      void loadIntegrations();
+    }
+  });
+
+  async function handleSaveSecret(key: string) {
+    try {
+      await setIntegrationSecret(key, secretInputVal);
+      secretInputVal = '';
+      editingSecretKey = null;
+      showToast(t('settings.integrations.secretSaved'), 'success');
+      await loadIntegrations();
+    } catch (err: any) {
+      showToast(errorText(err), 'error');
+    }
+  }
+
+  async function handleDeleteSecret(key: string) {
+    try {
+      await deleteIntegrationSecret(key);
+      showToast(t('settings.integrations.secretDeleted'), 'success');
+      await loadIntegrations();
+    } catch (err: any) {
+      showToast(errorText(err), 'error');
+    }
+  }
+
+  async function handleTestConnection(key: string) {
+    testingKey = key;
+    try {
+      const res = await testIntegrationConnection(key);
+      if (res.success) {
+        showToast(t('settings.integrations.testSuccess', { ms: res.duration_ms, msg: res.message }), 'success');
+      } else {
+        showToast(t('settings.integrations.testFailed', { msg: res.message }), 'error');
+      }
+    } catch (err: any) {
+      showToast(errorText(err), 'error');
+    } finally {
+      testingKey = null;
+    }
+  }
+
+  async function handleFlushOutbox() {
+    isFlushingOutbox = true;
+    try {
+      const res = await flushOutboxNow();
+      showToast(
+        t('settings.integrations.flushed', {
+          succeeded: res.succeeded,
+          failed: res.failed,
+          expired: res.expired,
+          dead_lettered: res.dead_lettered
+        }),
+        'success'
+      );
+      await loadIntegrations();
+    } catch (err: any) {
+      showToast(errorText(err), 'error');
+    } finally {
+      isFlushingOutbox = false;
     }
   }
 
@@ -1226,6 +1323,193 @@
                       {new Date(rec.started_at * 1000).toLocaleTimeString()}
                     </td>
                     <td class="py-2 text-neutral-800 dark:text-neutral-200 break-words">{rec.message}</td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          </div>
+        {/if}
+      </div>
+    </div>
+  {:else if activeTab === 'integrations'}
+    <div class="{CARD} space-y-8">
+      <div>
+        <h2 class="text-lg font-semibold text-neutral-900 dark:text-white">{t('settings.integrations.title')}</h2>
+        <p class="text-xs {MUTED}">{t('settings.integrations.subtitle')}</p>
+      </div>
+
+      <!-- Registered Connectors -->
+      <div class="space-y-4">
+        <h3 class="text-base font-semibold text-neutral-900 dark:text-white">{t('settings.integrations.connectorsTitle')}</h3>
+        {#if integrationsList.length === 0}
+          <p class="text-xs {MUTED}">{t('settings.integrations.noConnectors')}</p>
+        {:else}
+          <div class="space-y-3">
+            {#each integrationsList as intg}
+              <div class="{SUBCARD} flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div class="space-y-1 min-w-0">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-sm font-semibold text-neutral-900 dark:text-white">{intg.key}</span>
+                    <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400">
+                      {intg.kind}
+                    </span>
+                    <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-sky-100 dark:bg-sky-950/50 text-sky-700 dark:text-sky-400">
+                      auth: {intg.auth_kind}
+                    </span>
+                    {#if intg.has_secret}
+                      <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 font-medium">
+                        {t('settings.integrations.secretConfigured')}
+                      </span>
+                    {:else}
+                      <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-200 dark:bg-neutral-800 text-neutral-500 font-medium">
+                        {t('settings.integrations.noSecret')}
+                      </span>
+                    {/if}
+                  </div>
+                  <p class="text-xs font-mono text-neutral-500 dark:text-neutral-400 truncate">
+                    {intg.base_url}
+                  </p>
+
+                  {#if editingSecretKey === intg.key}
+                    <div class="flex items-center gap-2 pt-2">
+                      <input
+                        type="password"
+                        bind:value={secretInputVal}
+                        placeholder={t('settings.integrations.secretPlaceholder')}
+                        class="{INPUT} text-xs py-1 max-w-xs"
+                      />
+                      <button
+                        type="button"
+                        onclick={() => handleSaveSecret(intg.key)}
+                        class="px-2.5 py-1 bg-sky-600 hover:bg-sky-500 text-white text-xs font-medium rounded transition-colors"
+                      >
+                        {t('settings.integrations.saveSecret')}
+                      </button>
+                      <button
+                        type="button"
+                        onclick={() => (editingSecretKey = null)}
+                        class="px-2.5 py-1 bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 text-xs font-medium rounded transition-colors"
+                      >
+                        {t('settings.schedules.cancel')}
+                      </button>
+                    </div>
+                  {/if}
+                </div>
+
+                <div class="flex items-center gap-2 self-end md:self-auto shrink-0">
+                  <button
+                    type="button"
+                    onclick={() => {
+                      editingSecretKey = intg.key;
+                      secretInputVal = '';
+                    }}
+                    class="px-2.5 py-1 text-xs font-medium rounded border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                  >
+                    {t('settings.integrations.setSecret')}
+                  </button>
+                  {#if intg.has_secret}
+                    <button
+                      type="button"
+                      onclick={() => handleDeleteSecret(intg.key)}
+                      class="px-2.5 py-1 text-xs font-medium rounded border border-red-300 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+                    >
+                      {t('settings.integrations.deleteSecret')}
+                    </button>
+                  {/if}
+                  <button
+                    type="button"
+                    disabled={testingKey === intg.key}
+                    onclick={() => handleTestConnection(intg.key)}
+                    class="px-3 py-1 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white text-xs font-medium rounded transition-colors"
+                  >
+                    {testingKey === intg.key ? t('settings.integrations.testing') : t('settings.integrations.testConnection')}
+                  </button>
+                </div>
+              </div>
+            {/each}
+          </div>
+        {/if}
+      </div>
+
+      <!-- Offline Outbox Queue -->
+      <div class="space-y-4 pt-4 border-t border-neutral-200 dark:border-neutral-800">
+        <div class="flex items-center justify-between">
+          <h3 class="text-base font-semibold text-neutral-900 dark:text-white">{t('settings.integrations.outboxTitle')}</h3>
+          <button
+            type="button"
+            disabled={isFlushingOutbox || outboxItems.length === 0}
+            onclick={handleFlushOutbox}
+            class="px-3 py-1 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white text-xs font-medium rounded transition-colors"
+          >
+            {isFlushingOutbox ? t('settings.integrations.flushing') : t('settings.integrations.flushNow')}
+          </button>
+        </div>
+
+        {#if outboxItems.length === 0}
+          <p class="text-xs {MUTED}">{t('settings.integrations.noOutbox')}</p>
+        {:else}
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-xs text-left">
+              <thead>
+                <tr class="border-b border-neutral-200 dark:border-neutral-800 text-neutral-500">
+                  <th class="py-2 pr-4">{t('settings.integrations.method')}</th>
+                  <th class="py-2 pr-4">Endpoint</th>
+                  <th class="py-2 pr-4">{t('settings.integrations.status')}</th>
+                  <th class="py-2 pr-4">{t('settings.integrations.attempts')}</th>
+                  <th class="py-2">{t('settings.integrations.time')}</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-neutral-100 dark:divide-neutral-800/50">
+                {#each outboxItems as item}
+                  <tr>
+                    <td class="py-2 pr-4 font-mono font-medium">{item.method}</td>
+                    <td class="py-2 pr-4 font-mono text-neutral-600 dark:text-neutral-400">{item.endpoint}</td>
+                    <td class="py-2 pr-4">
+                      <span class="px-1.5 py-0.5 rounded font-mono text-[10px] font-medium {item.status === 'flushed' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400' : item.status === 'dead_letter' ? 'bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-400' : 'bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400'}">
+                        {item.status}
+                      </span>
+                    </td>
+                    <td class="py-2 pr-4 font-mono">{item.attempts}/{item.max_attempts}</td>
+                    <td class="py-2 text-neutral-500">{new Date(item.created_at * 1000).toLocaleTimeString()}</td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          </div>
+        {/if}
+      </div>
+
+      <!-- Request Logs (Sanitized) -->
+      <div class="space-y-4 pt-4 border-t border-neutral-200 dark:border-neutral-800">
+        <h3 class="text-base font-semibold text-neutral-900 dark:text-white">{t('settings.integrations.logsTitle')}</h3>
+        {#if requestLogs.length === 0}
+          <p class="text-xs {MUTED}">{t('settings.integrations.noLogs')}</p>
+        {:else}
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-xs text-left">
+              <thead>
+                <tr class="border-b border-neutral-200 dark:border-neutral-800 text-neutral-500">
+                  <th class="py-2 pr-4">{t('settings.integrations.method')}</th>
+                  <th class="py-2 pr-4">{t('settings.integrations.host')}</th>
+                  <th class="py-2 pr-4">{t('settings.integrations.path')}</th>
+                  <th class="py-2 pr-4">{t('settings.integrations.status')}</th>
+                  <th class="py-2 pr-4">{t('settings.integrations.duration')}</th>
+                  <th class="py-2">{t('settings.integrations.time')}</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-neutral-100 dark:divide-neutral-800/50">
+                {#each requestLogs as log}
+                  <tr>
+                    <td class="py-2 pr-4 font-mono font-medium">{log.method}</td>
+                    <td class="py-2 pr-4 font-mono text-neutral-500">{log.host}</td>
+                    <td class="py-2 pr-4 font-mono text-neutral-600 dark:text-neutral-400 max-w-xs truncate">{log.path}</td>
+                    <td class="py-2 pr-4">
+                      <span class="font-mono text-[11px] {log.status >= 200 && log.status < 300 ? 'text-emerald-500 font-semibold' : 'text-red-500 font-semibold'}">
+                        {log.status}
+                      </span>
+                    </td>
+                    <td class="py-2 pr-4 font-mono text-neutral-500">{log.duration_ms}ms</td>
+                    <td class="py-2 text-neutral-500">{new Date(log.timestamp * 1000).toLocaleTimeString()}</td>
                   </tr>
                 {/each}
               </tbody>

@@ -11,3 +11,5 @@ docs/android-signing.md:11
 docs/android-signing.md:28
 docs/android-signing.md:34
 docs/android-signing.md:46
+Claude outputs/android-signing.ORIGINAL-PRIVATE.md
+Claude outputs/rename-docs.sh

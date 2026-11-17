@@ -2,13 +2,15 @@
 
 use crate::error::{CafError, HttpError};
 use crate::http::{HttpClient, HttpRequest, HttpResponse};
-use crate::integrations::log::{add_request_log, redact_path_and_query, IntegrationRequestLogRecord};
+use crate::integrations::log::{
+    IntegrationRequestLogRecord, add_request_log, redact_path_and_query,
+};
 use crate::integrations::secrets::get_integration_secret;
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tokio::sync::Semaphore;
 
@@ -28,17 +30,11 @@ pub enum AuthKind {
 impl AuthKind {
     pub fn parse(s: &str, header: Option<&str>) -> Self {
         match s.trim().to_ascii_lowercase().as_str() {
-            "api_key_header" => {
-                AuthKind::ApiKeyHeader(header.unwrap_or("X-API-Key").to_string())
-            }
-            "api_key_query" => {
-                AuthKind::ApiKeyQuery(header.unwrap_or("api_key").to_string())
-            }
+            "api_key_header" => AuthKind::ApiKeyHeader(header.unwrap_or("X-API-Key").to_string()),
+            "api_key_query" => AuthKind::ApiKeyQuery(header.unwrap_or("api_key").to_string()),
             "bearer" => AuthKind::Bearer,
             "basic" => AuthKind::Basic,
-            "hmac_sha256" => {
-                AuthKind::HmacSha256(header.unwrap_or("X-Signature").to_string())
-            }
+            "hmac_sha256" => AuthKind::HmacSha256(header.unwrap_or("X-Signature").to_string()),
             "oauth2_client_credentials" => AuthKind::OAuth2ClientCredentials,
             _ => AuthKind::None,
         }
@@ -81,7 +77,9 @@ pub struct Connector {
 
 impl Connector {
     pub fn new(config: ConnectorConfig) -> Self {
-        let semaphore = config.concurrency.map(|c| Arc::new(Semaphore::new(c as usize)));
+        let semaphore = config
+            .concurrency
+            .map(|c| Arc::new(Semaphore::new(c as usize)));
         let client = HttpClient::default_client();
         Self {
             config,
@@ -106,7 +104,8 @@ impl Connector {
         let window = self.rate_limit_minute_start.load(Ordering::Acquire);
         if now_sec >= window + 60 {
             // New minute window
-            self.rate_limit_minute_start.store(now_sec, Ordering::Release);
+            self.rate_limit_minute_start
+                .store(now_sec, Ordering::Release);
             self.rate_limit_count.store(1, Ordering::Release);
             Ok(())
         } else {
@@ -127,7 +126,14 @@ impl Connector {
         body: Option<Vec<u8>>,
         idempotency_key: Option<&str>,
     ) -> Result<HttpResponse, CafError> {
-        self.send(method, path, body, custom_headers, idempotency_key.map(|s| s.to_string())).await
+        self.send(
+            method,
+            path,
+            body,
+            custom_headers,
+            idempotency_key.map(|s| s.to_string()),
+        )
+        .await
     }
 
     pub async fn send(
@@ -142,9 +148,11 @@ impl Connector {
 
         // Concurrency limiter guard
         let _permit = match &self.concurrency_semaphore {
-            Some(sem) => Some(sem.acquire().await.map_err(|_| {
-                CafError::Http(HttpError::Network)
-            })?),
+            Some(sem) => Some(
+                sem.acquire()
+                    .await
+                    .map_err(|_| CafError::Http(HttpError::Network))?,
+            ),
             None => None,
         };
 

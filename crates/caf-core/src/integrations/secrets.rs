@@ -46,8 +46,13 @@ pub fn get_integration_secret(integration_key: &str) -> Result<Option<String>, C
         .query([&kv_key])
         .map_err(|e| CafError::Db(DbError::Generic(e.to_string())))?;
 
-    if let Some(row) = rows.next().map_err(|e| CafError::Db(DbError::Generic(e.to_string())))? {
-        let val: String = row.get(0).map_err(|e| CafError::Db(DbError::Generic(e.to_string())))?;
+    if let Some(row) = rows
+        .next()
+        .map_err(|e| CafError::Db(DbError::Generic(e.to_string())))?
+    {
+        let val: String = row
+            .get(0)
+            .map_err(|e| CafError::Db(DbError::Generic(e.to_string())))?;
         Ok(Some(val))
     } else {
         Ok(None)

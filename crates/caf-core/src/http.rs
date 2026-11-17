@@ -58,13 +58,11 @@ pub struct HttpResponse {
 
 impl HttpResponse {
     pub fn text(&self) -> Result<String, CafError> {
-        String::from_utf8(self.body.clone())
-            .map_err(|_| CafError::Http(HttpError::Network))
+        String::from_utf8(self.body.clone()).map_err(|_| CafError::Http(HttpError::Network))
     }
 
     pub fn json<T: serde::de::DeserializeOwned>(&self) -> Result<T, CafError> {
-        serde_json::from_slice(&self.body)
-            .map_err(|_| CafError::Http(HttpError::Network))
+        serde_json::from_slice(&self.body).map_err(|_| CafError::Http(HttpError::Network))
     }
 }
 
@@ -315,8 +313,8 @@ impl HttpClient {
         payload: &T,
         timeout_secs: u64,
     ) -> Result<String, CafError> {
-        let json_bytes = serde_json::to_vec(payload)
-            .map_err(|_| CafError::Http(HttpError::Network))?;
+        let json_bytes =
+            serde_json::to_vec(payload).map_err(|_| CafError::Http(HttpError::Network))?;
 
         let res = self.execute(HttpRequest {
             method: "POST".to_string(),
@@ -355,11 +353,16 @@ fn resolve_redirect_url(base: &str, location: &str) -> Result<String, CafError> 
 }
 
 fn map_ureq_error(err: ureq::Error, _timeout_secs: u64) -> CafError {
-    let err_str = err.to_string();
-    if err_str.contains("timeout") || err_str.contains("timed out") {
-        CafError::Http(HttpError::Timeout)
-    } else {
-        CafError::Http(HttpError::Network)
+    match err {
+        ureq::Error::StatusCode(_) => CafError::Http(HttpError::HttpStatus),
+        _ => {
+            let err_str = err.to_string();
+            if err_str.contains("timeout") || err_str.contains("timed out") {
+                CafError::Http(HttpError::Timeout)
+            } else {
+                CafError::Http(HttpError::Network)
+            }
+        }
     }
 }
 

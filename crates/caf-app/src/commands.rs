@@ -490,7 +490,8 @@ pub async fn scheduler_set_desktop_settings(
 
 // Integrations & Outbox (P09)
 #[tauri::command]
-pub async fn list_integrations() -> Result<Vec<caf_core::integrations::IntegrationStatusDto>, CafError> {
+pub async fn list_integrations()
+-> Result<Vec<caf_core::integrations::IntegrationStatusDto>, CafError> {
     run_guarded("list_integrations", || {
         caf_core::integrations::list_integrations()
     })
