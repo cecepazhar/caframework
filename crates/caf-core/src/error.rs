@@ -91,6 +91,18 @@ domain_error!(
 );
 
 domain_error!(
+    HttpError,
+    "HTTP",
+    InvalidUrl = ("001", "invalid URL format"),
+    InsecureHttp = ("002", "insecure HTTP disallowed for non-loopback host"),
+    Timeout = ("003", "HTTP request timed out"),
+    ResponseTooLarge = ("004", "HTTP response body exceeded size cap"),
+    RedirectDisallowed = ("005", "HTTP redirect to disallowed host refused"),
+    HttpStatus = ("006", "HTTP server returned error status"),
+    Network = ("007", "network connection failed"),
+);
+
+domain_error!(
     ValidationError,
     "VALIDATION",
     EmptyField = ("001", "field cannot be empty"),
@@ -127,6 +139,8 @@ pub enum CafError {
     Pro(#[from] ProError),
     #[error("auth: {0}")]
     Auth(#[from] AuthError),
+    #[error("http: {0}")]
+    Http(#[from] HttpError),
     #[error("not implemented: {0}")]
     NotImplemented(String),
 }
@@ -141,6 +155,7 @@ impl CafError {
             Self::Validation(e) => e.code(),
             Self::Pro(e) => e.code(),
             Self::Auth(e) => e.code(),
+            Self::Http(e) => e.code(),
             Self::NotImplemented(_) => "CAF-CORE-501",
         }
     }
@@ -154,6 +169,7 @@ impl CafError {
             Self::Validation(_) => "VALIDATION",
             Self::Pro(_) => "PRO",
             Self::Auth(_) => "AUTH",
+            Self::Http(_) => "HTTP",
             Self::NotImplemented(_) => "CORE",
         }
     }
@@ -184,6 +200,9 @@ impl CafError {
         }
         for v in AuthError::all_variants() {
             list.push(Self::Auth(v));
+        }
+        for v in HttpError::all_variants() {
+            list.push(Self::Http(v));
         }
         list.push(Self::NotImplemented("example feature".into()));
         list

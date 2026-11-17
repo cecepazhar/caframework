@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-list-integrations"
+description = "Enables the list_integrations command without any pre-configured scope."
+commands.allow = ["list_integrations"]
+
+[[permission]]
+identifier = "deny-list-integrations"
+description = "Denies the list_integrations command without any pre-configured scope."
+commands.deny = ["list_integrations"]

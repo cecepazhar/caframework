@@ -333,6 +333,42 @@ pub const COMMAND_POLICIES: &[CommandPolicy] = &[
         policy: Policy::Requires("settings:manage"),
         returns_list: false,
     },
+    // Integrations & Outbox (P09)
+    CommandPolicy {
+        name: "list_integrations",
+        policy: Policy::Session,
+        returns_list: true,
+    },
+    CommandPolicy {
+        name: "set_integration_secret",
+        policy: Policy::Requires("integrations:manage"),
+        returns_list: false,
+    },
+    CommandPolicy {
+        name: "delete_integration_secret",
+        policy: Policy::Requires("integrations:manage"),
+        returns_list: false,
+    },
+    CommandPolicy {
+        name: "test_integration_connection",
+        policy: Policy::Requires("integrations:manage"),
+        returns_list: false,
+    },
+    CommandPolicy {
+        name: "get_integration_logs",
+        policy: Policy::Requires("integrations:manage"),
+        returns_list: true,
+    },
+    CommandPolicy {
+        name: "get_outbox_items",
+        policy: Policy::Requires("integrations:manage"),
+        returns_list: true,
+    },
+    CommandPolicy {
+        name: "flush_outbox_now",
+        policy: Policy::Requires("integrations:manage"),
+        returns_list: false,
+    },
 ];
 
 pub fn get_command_policy(command_name: &str) -> Option<&'static CommandPolicy> {

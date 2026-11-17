@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-get-integration-logs"
+description = "Enables the get_integration_logs command without any pre-configured scope."
+commands.allow = ["get_integration_logs"]
+
+[[permission]]
+identifier = "deny-get-integration-logs"
+description = "Denies the get_integration_logs command without any pre-configured scope."
+commands.deny = ["get_integration_logs"]

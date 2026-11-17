@@ -63,7 +63,13 @@ pub fn make_builtin_jobs() -> Vec<RegisteredJob> {
             max_runtime_secs: 120,
             background_safe: true,
             runner: make_runner(|| async {
-                Ok("Outbox queue is empty (0 queued items)".to_string())
+                match crate::integrations::flush_outbox().await {
+                    Ok(summary) => Ok(format!(
+                        "Outbox flush completed: {} succeeded, {} failed, {} expired, {} dead-lettered",
+                        summary.succeeded, summary.failed, summary.expired, summary.dead_lettered
+                    )),
+                    Err(e) => Err(format!("Outbox flush error: {e}")),
+                }
             }),
         },
         // 5. pro.licence_refresh (P11 Pro licensing)

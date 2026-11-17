@@ -213,65 +213,59 @@ export async function invoke_setPerformancePrefs(prefs: any): Promise<any> {
   return invoke('set_performance_prefs', { prefs: prefs });
 }
 
-export interface JobStatusDto {
-  key: string;
-  title_en: string;
-  title_id: string;
-  schedule: string;
-  description_en: string;
-  description_id: string;
-  permission: string;
-  enabled: boolean;
-  needs_vault: boolean;
-  catch_up: 'skip' | 'run_once';
-  max_runtime_secs: number;
-  background_safe: boolean;
-  last_run_at: number | null;
-  next_run_at: number | null;
-  last_status: string | null;
-  is_running: boolean;
-}
-
-export interface JobRunRecord {
-  id: string;
-  job_key: string;
-  started_at: number;
-  finished_at: number;
-  status: string;
-  message: string;
-}
-
-export interface SchedulerDesktopSettings {
-  close_to_tray: boolean;
-  start_at_login: boolean;
-}
-
-export async function invoke_schedulerListJobs(): Promise<JobStatusDto[]> {
+export async function invoke_schedulerListJobs(): Promise<any[]> {
   return invoke('scheduler_list_jobs');
 }
 
 export async function invoke_schedulerSetJobEnabled(key: string, enabled: boolean): Promise<any> {
-  return invoke('scheduler_set_job_enabled', { key, enabled });
+  return invoke('scheduler_set_job_enabled', { key: key, enabled: enabled });
 }
 
 export async function invoke_schedulerUpdateSchedule(key: string, schedule: string): Promise<any> {
-  return invoke('scheduler_update_schedule', { key, schedule });
+  return invoke('scheduler_update_schedule', { key: key, schedule: schedule });
 }
 
 export async function invoke_schedulerRunJobNow(key: string): Promise<string> {
-  return invoke('scheduler_run_job_now', { key });
+  return invoke('scheduler_run_job_now', { key: key });
 }
 
-export async function invoke_schedulerGetHistory(key: string | null, limit: number | null): Promise<JobRunRecord[]> {
-  return invoke('scheduler_get_history', { key, limit });
+export async function invoke_schedulerGetHistory(key: string | null, limit: number | null): Promise<any[]> {
+  return invoke('scheduler_get_history', { key: key, limit: limit });
 }
 
-export async function invoke_schedulerGetDesktopSettings(): Promise<SchedulerDesktopSettings> {
+export async function invoke_schedulerGetDesktopSettings(): Promise<any> {
   return invoke('scheduler_get_desktop_settings');
 }
 
-export async function invoke_schedulerSetDesktopSettings(settings: SchedulerDesktopSettings): Promise<any> {
-  return invoke('scheduler_set_desktop_settings', { settings });
+export async function invoke_schedulerSetDesktopSettings(settings: any): Promise<any> {
+  return invoke('scheduler_set_desktop_settings', { settings: settings });
 }
 
+export async function invoke_listIntegrations(): Promise<any[]> {
+  return invoke('list_integrations');
+}
+
+export async function invoke_setIntegrationSecret(key: string, secret: string): Promise<any> {
+  return invoke('set_integration_secret', { key: key, secret: secret });
+}
+
+export async function invoke_deleteIntegrationSecret(key: string): Promise<any> {
+  return invoke('delete_integration_secret', { key: key });
+}
+
+export async function invoke_testIntegrationConnection(key: string): Promise<any> {
+  return invoke('test_integration_connection', { key: key });
+}
+
+export async function invoke_getIntegrationLogs(key: string | null, limit: number | null): Promise<any[]> {
+  return invoke('get_integration_logs', { key: key, limit: limit });
+}
+
+export async function invoke_getOutboxItems(status: any | null, limit: number | null): Promise<any[]> {
+  return invoke('get_outbox_items', { status: status, limit: limit });
+}
+
+export async function invoke_flushOutboxNow(): Promise<any> {
+  return invoke('flush_outbox_now');
+}
 

@@ -487,3 +487,70 @@ pub async fn scheduler_set_desktop_settings(
     })
     .await
 }
+
+// Integrations & Outbox (P09)
+#[tauri::command]
+pub async fn list_integrations() -> Result<Vec<caf_core::integrations::IntegrationStatusDto>, CafError> {
+    run_guarded("list_integrations", || {
+        caf_core::integrations::list_integrations()
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn set_integration_secret(key: String, secret: String) -> Result<(), CafError> {
+    run_guarded("set_integration_secret", move || {
+        caf_core::integrations::secrets::set_integration_secret(&key, &secret)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn delete_integration_secret(key: String) -> Result<(), CafError> {
+    run_guarded("delete_integration_secret", move || {
+        caf_core::integrations::secrets::delete_integration_secret(&key)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn test_integration_connection(
+    key: String,
+) -> Result<caf_core::integrations::TestConnectionResult, CafError> {
+    guarded("test_integration_connection", || Ok(()))?;
+    caf_core::integrations::test_integration_connection(&key).await
+}
+
+#[tauri::command]
+pub async fn get_integration_logs(
+    key: Option<String>,
+    limit: Option<usize>,
+) -> Result<Vec<caf_core::integrations::IntegrationRequestLogRecord>, CafError> {
+    run_guarded("get_integration_logs", move || {
+        Ok(caf_core::integrations::get_request_logs(
+            key.as_deref(),
+            limit.unwrap_or(100),
+        ))
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn get_outbox_items(
+    status: Option<caf_core::integrations::OutboxStatus>,
+    limit: Option<usize>,
+) -> Result<Vec<caf_core::integrations::OutboxItem>, CafError> {
+    run_guarded("get_outbox_items", move || {
+        Ok(caf_core::integrations::get_outbox_items(
+            status,
+            limit.unwrap_or(100),
+        ))
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn flush_outbox_now() -> Result<caf_core::integrations::outbox::FlushSummary, CafError> {
+    guarded("flush_outbox_now", || Ok(()))?;
+    caf_core::integrations::flush_outbox().await
+}

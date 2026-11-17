@@ -74,7 +74,7 @@ static_regex!(
 static_regex!(api_key_re, r"\bsk-[a-zA-Z0-9]{20,}|\bgsk_[a-zA-Z0-9]{20,}");
 static_regex!(
     secret_kv_re,
-    r#"(?i)("?(?:password|passphrase|secret|token|api_key|auth)"?\s*[:=]\s*)"?([^"'\s,}]+)"?"#
+    r#"(?i)("?(?:password|passphrase|secret|token|api_key|auth)"?\s*[:=]\s*)"?([^"'\s,}&]+)"?"#
 );
 static_regex!(
     ipv4_re,

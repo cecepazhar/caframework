@@ -36,6 +36,7 @@ pub mod error;
 pub mod feedback;
 pub mod generated;
 pub mod http;
+pub mod integrations;
 pub mod keyring;
 pub mod migrations;
 pub mod notes;

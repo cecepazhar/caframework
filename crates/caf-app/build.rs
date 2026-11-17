@@ -77,6 +77,14 @@ const COMMANDS: &[&str] = &[
     "scheduler_get_history",
     "scheduler_get_desktop_settings",
     "scheduler_set_desktop_settings",
+    // Integrations & Outbox (P09)
+    "list_integrations",
+    "set_integration_secret",
+    "delete_integration_secret",
+    "test_integration_connection",
+    "get_integration_logs",
+    "get_outbox_items",
+    "flush_outbox_now",
 ];
 
 fn main() {

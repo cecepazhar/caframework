@@ -67,6 +67,13 @@
     "allow-scheduler-get-history",
     "allow-scheduler-get-desktop-settings",
     "allow-scheduler-set-desktop-settings",
+    "allow-list-integrations",
+    "allow-set-integration-secret",
+    "allow-delete-integration-secret",
+    "allow-test-integration-connection",
+    "allow-get-integration-logs",
+    "allow-get-outbox-items",
+    "allow-flush-outbox-now",
     "dialog:default",
     "process:default",
     "fs:default"

@@ -174,6 +174,13 @@ pub fn run_with_start(start: std::time::Instant) {
             commands::scheduler_get_history,
             commands::scheduler_get_desktop_settings,
             commands::scheduler_set_desktop_settings,
+            commands::list_integrations,
+            commands::set_integration_secret,
+            commands::delete_integration_secret,
+            commands::test_integration_connection,
+            commands::get_integration_logs,
+            commands::get_outbox_items,
+            commands::flush_outbox_now,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

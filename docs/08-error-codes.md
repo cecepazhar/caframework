@@ -24,6 +24,14 @@
 | `CAF-DB-004` | `DB` | database: record not found |
 | `CAF-DB-005` | `DB` | database: migration checksum does not match stored snapshot |
 | `CAF-DB-006` | `DB` | database: database schema version is newer than the application understands |
+| `CAF-HTTP-000` | `HTTP` | http: sample error |
+| `CAF-HTTP-001` | `HTTP` | http: invalid URL format |
+| `CAF-HTTP-002` | `HTTP` | http: insecure HTTP disallowed for non-loopback host |
+| `CAF-HTTP-003` | `HTTP` | http: HTTP request timed out |
+| `CAF-HTTP-004` | `HTTP` | http: HTTP response body exceeded size cap |
+| `CAF-HTTP-005` | `HTTP` | http: HTTP redirect to disallowed host refused |
+| `CAF-HTTP-006` | `HTTP` | http: HTTP server returned error status |
+| `CAF-HTTP-007` | `HTTP` | http: network connection failed |
 | `CAF-IO-000` | `IO` | io: sample error |
 | `CAF-IO-001` | `IO` | io: file not found |
 | `CAF-IO-002` | `IO` | io: permission denied |
