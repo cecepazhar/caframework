@@ -83,18 +83,30 @@ pub fn update_max_seen_time(now_unix: u64) -> Result<(), CafError> {
     Ok(())
 }
 
-pub fn clear_billing_state() -> Result<(), CafError> {
+pub fn save_account_info(id: &str, email: &str, name: &str) -> Result<(), CafError> {
     let conn = db::open()?;
     conn.execute(
-        "DELETE FROM app_kv WHERE key IN (?1, ?2, ?3, ?4)",
-        [
-            KEY_DEVICE_TOKEN,
-            KEY_CACHED_TOKEN,
-            KEY_LAST_VERIFIED_AT,
-            KEY_MAX_SEEN_TIME,
-        ],
+        "INSERT OR REPLACE INTO app_kv (key, value) VALUES ('billing.account_id', ?1), ('billing.account_email', ?2), ('billing.account_name', ?3)",
+        [id, email, name],
     )
     .map_err(|e| CafError::Db(DbError::Generic(e.to_string())))?;
+    Ok(())
+}
+
+pub fn get_account_info() -> Result<Option<(String, String, String)>, CafError> {
+    let id = get_kv("billing.account_id")?;
+    let email = get_kv("billing.account_email")?;
+    let name = get_kv("billing.account_name")?;
+    match (id, email, name) {
+        (Some(id), Some(email), Some(name)) => Ok(Some((id, email, name))),
+        _ => Ok(None),
+    }
+}
+
+pub fn clear_billing_state() -> Result<(), CafError> {
+    let conn = db::open()?;
+    conn.execute("DELETE FROM app_kv WHERE key LIKE 'billing.%'", [])
+        .map_err(|e| CafError::Db(DbError::Generic(e.to_string())))?;
     Ok(())
 }
 

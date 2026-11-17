@@ -293,3 +293,47 @@ export async function invoke_executeImport(entityKey: string, format: string, da
   return invoke('execute_import', { entity_key: entityKey, format: format, data: data, mapping: mapping, mode: mode, strategy: strategy });
 }
 
+export async function invoke_proStatus(): Promise<any> {
+  return invoke('pro_status');
+}
+
+export async function invoke_proServerAvailable(): Promise<boolean> {
+  return invoke('pro_server_available');
+}
+
+export async function invoke_proRegister(email: string, password: string | null, name: string | null, locale: string | null): Promise<any> {
+  return invoke('pro_register', { email: email, password: password, name: name, locale: locale });
+}
+
+export async function invoke_proResendVerification(email: string): Promise<any> {
+  return invoke('pro_resend_verification', { email: email });
+}
+
+export async function invoke_proForgotPassword(email: string, locale: string | null): Promise<any> {
+  return invoke('pro_forgot_password', { email: email, locale: locale });
+}
+
+export async function invoke_proLogin(email: string, password: string | null): Promise<any> {
+  return invoke('pro_login', { email: email, password: password });
+}
+
+export async function invoke_proStartTrial(): Promise<any> {
+  return invoke('pro_start_trial');
+}
+
+export async function invoke_proAccount(): Promise<any> {
+  return invoke('pro_account');
+}
+
+export async function invoke_proRevokeDevice(deviceId: string): Promise<any> {
+  return invoke('pro_revoke_device', { device_id: deviceId });
+}
+
+export async function invoke_proLogout(): Promise<any> {
+  return invoke('pro_logout');
+}
+
+export async function invoke_proGatedAction(): Promise<string> {
+  return invoke('pro_gated_action');
+}
+

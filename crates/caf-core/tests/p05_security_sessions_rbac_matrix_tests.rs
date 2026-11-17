@@ -419,6 +419,24 @@ fn test_p05_6_permission_matrix_all_commands() {
                         }
                     }
                 }
+                Policy::Pro => {
+                    if role_opt.is_none() {
+                        assert!(
+                            matches!(check_res, Err(CafError::Auth(AuthError::Unauthorized))),
+                            "Command '{}' is Pro, must fail without session",
+                            cp.name
+                        );
+                    } else {
+                        assert!(
+                            matches!(
+                                check_res,
+                                Err(CafError::Pro(caf_core::error::ProError::FeatureLocked))
+                            ),
+                            "Command '{}' is Pro, must fail without Pro entitlement",
+                            cp.name
+                        );
+                    }
+                }
             }
         }
     }

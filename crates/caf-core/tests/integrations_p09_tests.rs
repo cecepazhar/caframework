@@ -26,13 +26,34 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+static TEST_LOCK: Mutex<()> = Mutex::new(());
+
+#[allow(dead_code)]
+struct TestEnv {
+    pub dir: std::path::PathBuf,
+    _guard: std::sync::MutexGuard<'static, ()>,
+}
+
+impl Drop for TestEnv {
+    fn drop(&mut self) {
+        caf_core::vault::lock();
+        let _ = std::fs::remove_dir_all(&self.dir);
+    }
+}
+
 // Helper to run isolated test with unlocked test vault
-fn setup_test_vault(label: &str) -> std::path::PathBuf {
+fn setup_test_vault(label: &str) -> TestEnv {
+    let guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    caf_core::vault::lock();
     let temp_dir = std::env::temp_dir().join(format!("caf_p09_{label}_{}", uuid::Uuid::new_v4()));
+    let _ = std::fs::remove_dir_all(&temp_dir);
     std::fs::create_dir_all(&temp_dir).expect("create test dir");
     caf_core::paths::set_custom_data_dir(temp_dir.clone()).expect("set data dir");
     caf_core::vault::init_test_vault(&temp_dir);
-    temp_dir
+    TestEnv {
+        dir: temp_dir,
+        _guard: guard,
+    }
 }
 
 // -----------------------------------------------------------------------------

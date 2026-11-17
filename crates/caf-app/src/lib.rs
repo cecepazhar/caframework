@@ -188,6 +188,18 @@ pub fn run_with_start(start: std::time::Instant) {
             commands::parse_import_file,
             commands::preview_import_data,
             commands::execute_import,
+            // Pro licensing
+            commands::pro_status,
+            commands::pro_server_available,
+            commands::pro_register,
+            commands::pro_resend_verification,
+            commands::pro_forgot_password,
+            commands::pro_login,
+            commands::pro_start_trial,
+            commands::pro_account,
+            commands::pro_revoke_device,
+            commands::pro_logout,
+            commands::pro_gated_action,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

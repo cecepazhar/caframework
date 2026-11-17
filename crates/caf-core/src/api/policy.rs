@@ -12,6 +12,8 @@ pub enum Policy {
     Session,
     /// Specific RBAC permission required on the active profile session.
     Requires(&'static str),
+    /// Requires unlocked vault, active session, and Pro entitlement.
+    Pro,
 }
 
 /// Metadata describing a registered command.
@@ -400,6 +402,62 @@ pub const COMMAND_POLICIES: &[CommandPolicy] = &[
         policy: Policy::Session,
         returns_list: false,
     },
+    // Pro licensing commands (FR-8, P11)
+    CommandPolicy {
+        name: "pro_status",
+        policy: Policy::Public,
+        returns_list: false,
+    },
+    CommandPolicy {
+        name: "pro_server_available",
+        policy: Policy::Public,
+        returns_list: false,
+    },
+    CommandPolicy {
+        name: "pro_register",
+        policy: Policy::Public,
+        returns_list: false,
+    },
+    CommandPolicy {
+        name: "pro_resend_verification",
+        policy: Policy::Public,
+        returns_list: false,
+    },
+    CommandPolicy {
+        name: "pro_forgot_password",
+        policy: Policy::Public,
+        returns_list: false,
+    },
+    CommandPolicy {
+        name: "pro_login",
+        policy: Policy::Unlocked,
+        returns_list: false,
+    },
+    CommandPolicy {
+        name: "pro_start_trial",
+        policy: Policy::Unlocked,
+        returns_list: false,
+    },
+    CommandPolicy {
+        name: "pro_account",
+        policy: Policy::Unlocked,
+        returns_list: false,
+    },
+    CommandPolicy {
+        name: "pro_revoke_device",
+        policy: Policy::Unlocked,
+        returns_list: false,
+    },
+    CommandPolicy {
+        name: "pro_logout",
+        policy: Policy::Unlocked,
+        returns_list: false,
+    },
+    CommandPolicy {
+        name: "pro_gated_action",
+        policy: Policy::Pro,
+        returns_list: false,
+    },
 ];
 
 pub fn get_command_policy(command_name: &str) -> Option<&'static CommandPolicy> {
@@ -440,6 +498,14 @@ pub fn check_policy(command_name: &'static str) -> Result<(), CafError> {
             } else {
                 Err(CafError::Auth(AuthError::PermissionDenied))
             }
+        }
+        Policy::Pro => {
+            if !crate::vault::is_unlocked().unwrap_or(false) {
+                return Err(CafError::Vault(VaultError::Locked));
+            }
+            let _sess = crate::session::get_current_session()?;
+            crate::pro::enforce_pro_gating()?;
+            Ok(())
         }
     }
 }

@@ -92,6 +92,18 @@ const COMMANDS: &[&str] = &[
     "parse_import_file",
     "preview_import_data",
     "execute_import",
+    // Pro licensing
+    "pro_status",
+    "pro_server_available",
+    "pro_register",
+    "pro_resend_verification",
+    "pro_forgot_password",
+    "pro_login",
+    "pro_start_trial",
+    "pro_account",
+    "pro_revoke_device",
+    "pro_logout",
+    "pro_gated_action",
 ];
 
 fn main() {

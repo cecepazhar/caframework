@@ -621,3 +621,75 @@ pub async fn execute_import(
     })
     .await
 }
+
+// Pro licensing commands (FR-8, P11)
+#[tauri::command]
+pub async fn pro_status() -> Result<caf_core::pro::ProStatus, CafError> {
+    run_guarded("pro_status", caf_core::pro::get_pro_status).await
+}
+
+#[tauri::command]
+pub async fn pro_server_available() -> Result<bool, CafError> {
+    guarded("pro_server_available", || Ok(()))?;
+    caf_core::pro::pro_server_available().await
+}
+
+#[tauri::command]
+pub async fn pro_register(
+    email: String,
+    password: Option<String>,
+    name: Option<String>,
+    locale: Option<String>,
+) -> Result<(), CafError> {
+    guarded("pro_register", || Ok(()))?;
+    caf_core::pro::pro_register(email, password, name, locale).await
+}
+
+#[tauri::command]
+pub async fn pro_resend_verification(email: String) -> Result<(), CafError> {
+    guarded("pro_resend_verification", || Ok(()))?;
+    caf_core::pro::pro_resend_verification(email).await
+}
+
+#[tauri::command]
+pub async fn pro_forgot_password(email: String, locale: Option<String>) -> Result<(), CafError> {
+    guarded("pro_forgot_password", || Ok(()))?;
+    caf_core::pro::pro_forgot_password(email, locale).await
+}
+
+#[tauri::command]
+pub async fn pro_login(
+    email: String,
+    password: Option<String>,
+) -> Result<caf_core::pro::ProAccount, CafError> {
+    guarded("pro_login", || Ok(()))?;
+    caf_core::pro::pro_login(email, password).await
+}
+
+#[tauri::command]
+pub async fn pro_start_trial() -> Result<caf_core::pro::SyncOutcome, CafError> {
+    guarded("pro_start_trial", || Ok(()))?;
+    caf_core::pro::pro_start_trial().await
+}
+
+#[tauri::command]
+pub async fn pro_account() -> Result<caf_core::pro::AccountDetails, CafError> {
+    guarded("pro_account", || Ok(()))?;
+    caf_core::pro::pro_account().await
+}
+
+#[tauri::command]
+pub async fn pro_revoke_device(device_id: String) -> Result<(), CafError> {
+    guarded("pro_revoke_device", || Ok(()))?;
+    caf_core::pro::pro_revoke_device(device_id).await
+}
+
+#[tauri::command]
+pub async fn pro_logout() -> Result<(), CafError> {
+    run_guarded("pro_logout", caf_core::pro::pro_logout).await
+}
+
+#[tauri::command]
+pub async fn pro_gated_action() -> Result<String, CafError> {
+    run_guarded("pro_gated_action", caf_core::pro::pro_gated_action).await
+}

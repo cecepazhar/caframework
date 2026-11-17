@@ -79,12 +79,24 @@ pub fn make_builtin_jobs() -> Vec<RegisteredJob> {
             title_id: "Pembaruan Lisensi Pro".to_string(),
             default_schedule: "0 */6 * * *".to_string(),
             permission: "pro:manage".to_string(),
-            needs_vault: false,
+            needs_vault: true,
             catch_up: CatchUpPolicy::RunOnce,
             max_runtime_secs: 60,
             background_safe: false,
             runner: make_runner(|| async {
-                Ok("Licence check completed (active status confirmed)".to_string())
+                if !crate::vault::is_unlocked().unwrap_or(false) {
+                    return Ok("Licence check skipped (vault locked)".to_string());
+                }
+                match crate::pro::refresh_licence_now().await {
+                    Ok(status) => {
+                        let tier = status
+                            .license
+                            .map(|l| l.tier)
+                            .unwrap_or_else(|| "free".into());
+                        Ok(format!("Licence check completed: tier={tier}"))
+                    }
+                    Err(e) => Err(format!("Licence check error: {e}")),
+                }
             }),
         },
     ]
