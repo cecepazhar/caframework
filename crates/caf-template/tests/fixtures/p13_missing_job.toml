@@ -1,0 +1,16 @@
+[module]
+key = "job_provider"
+label_en = "Job Provider"
+label_id = "Penyedia Pekerjaan"
+cargo_feature = "mod-job-provider"
+depends_on = []
+conflicts_with = []
+
+[module.provides]
+menus = []
+permissions = []
+entities = []
+jobs = ["undefined_job_key"]
+integrations = []
+settings_sections = []
+ai_context_providers = []

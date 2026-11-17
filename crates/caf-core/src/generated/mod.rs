@@ -2,6 +2,7 @@
 
 pub mod brand;
 pub mod endpoints;
+pub mod module_extra;
 pub mod modules;
 pub mod permissions;
 pub mod prefix;

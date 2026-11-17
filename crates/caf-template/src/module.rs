@@ -125,6 +125,14 @@ pub fn validate_module_manifest(source: &str) -> Result<ModuleManifestFile, Vec<
 }
 
 pub fn validate_module_graph(manifests: &[ModuleManifestFile]) -> Result<(), Vec<ValidationError>> {
+    validate_module_graph_full(manifests, None, None)
+}
+
+pub fn validate_module_graph_full(
+    manifests: &[ModuleManifestFile],
+    app_config: Option<&crate::config::AppConfigFile>,
+    known_cargo_features: Option<&[&str]>,
+) -> Result<(), Vec<ValidationError>> {
     let mut errors = Vec::new();
     let mut keys = HashSet::new();
     let mut key_map = HashMap::new();
@@ -160,6 +168,83 @@ pub fn validate_module_graph(manifests: &[ModuleManifestFile]) -> Result<(), Vec
                         m.module.key, conf
                     ),
                 ));
+            }
+        }
+
+        if let Some(features) = known_cargo_features
+            && !features.contains(&m.module.cargo_feature.as_str())
+        {
+            errors.push(ValidationError::new(
+                format!("module.{}.cargo_feature", m.module.key),
+                format!(
+                    "module '{}' specifies cargo_feature '{}' which does not exist in Cargo.toml",
+                    m.module.key, m.module.cargo_feature
+                ),
+            ));
+        }
+
+        if let Some(cfg) = app_config
+            && let Some(provides) = &m.module.provides
+        {
+            for menu_key in &provides.menus {
+                if !cfg.menus.iter().any(|menu| menu.key == *menu_key) {
+                    errors.push(ValidationError::new(
+                        format!("module.{}.provides.menus", m.module.key),
+                        format!(
+                            "module '{}' provides menu '{}' which is not defined in app.toml",
+                            m.module.key, menu_key
+                        ),
+                    ));
+                }
+            }
+            for entity_key in &provides.entities {
+                if !cfg.entities.iter().any(|e| e.key == *entity_key) {
+                    errors.push(ValidationError::new(
+                        format!("module.{}.provides.entities", m.module.key),
+                        format!(
+                            "module '{}' provides entity '{}' which is not defined in app.toml",
+                            m.module.key, entity_key
+                        ),
+                    ));
+                }
+            }
+            for job_key in &provides.jobs {
+                if !cfg.jobs.iter().any(|j| j.key == *job_key) {
+                    errors.push(ValidationError::new(
+                        format!("module.{}.provides.jobs", m.module.key),
+                        format!(
+                            "module '{}' provides job '{}' which is not defined in app.toml",
+                            m.module.key, job_key
+                        ),
+                    ));
+                }
+            }
+            for intg_key in &provides.integrations {
+                if !cfg.integrations.iter().any(|i| i.key == *intg_key) {
+                    errors.push(ValidationError::new(
+                        format!("module.{}.provides.integrations", m.module.key),
+                        format!(
+                            "module '{}' provides integration '{}' which is not defined in app.toml",
+                            m.module.key, intg_key
+                        ),
+                    ));
+                }
+            }
+            for perm in &provides.permissions {
+                let defined = cfg
+                    .rbac
+                    .roles
+                    .iter()
+                    .any(|r| r.permissions.iter().any(|p| p == perm));
+                if !defined {
+                    errors.push(ValidationError::new(
+                        format!("module.{}.provides.permissions", m.module.key),
+                        format!(
+                            "module '{}' provides permission '{}' which is not defined in app.toml rbac.roles",
+                            m.module.key, perm
+                        ),
+                    ));
+                }
             }
         }
     }

@@ -1,0 +1,16 @@
+[module]
+key = "entity_provider"
+label_en = "Entity Provider"
+label_id = "Penyedia Entitas"
+cargo_feature = "mod-entity-provider"
+depends_on = []
+conflicts_with = []
+
+[module.provides]
+menus = []
+permissions = []
+entities = ["undefined_entity_key"]
+jobs = []
+integrations = []
+settings_sections = []
+ai_context_providers = []

@@ -52,6 +52,7 @@ pub fn make_builtin_jobs() -> Vec<RegisteredJob> {
             }),
         },
         // 4. integrations.outbox_flush (P09 connector layer)
+        #[cfg(feature = "mod-integrations")]
         RegisteredJob {
             key: "integrations.outbox_flush".to_string(),
             title_en: "Outbox Flush".to_string(),
@@ -73,6 +74,7 @@ pub fn make_builtin_jobs() -> Vec<RegisteredJob> {
             }),
         },
         // 5. pro.licence_refresh (P11 Pro licensing)
+        #[cfg(feature = "mod-pro")]
         RegisteredJob {
             key: "pro.licence_refresh".to_string(),
             title_en: "Pro Licence Refresh".to_string(),

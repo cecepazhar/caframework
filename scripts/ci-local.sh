@@ -7,6 +7,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 export CAF_DATA_DIR="$(mktemp -d)"
+export OPENSSL_NO_VENDOR=1
 trap 'rm -rf "$CAF_DATA_DIR"' EXIT
 
 echo "=== CAFramework Local CI Verification ==="

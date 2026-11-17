@@ -12,8 +12,30 @@ name = "caf_core"
 path = "src/lib.rs"
 
 [features]
-default = ["mod-ai-advanced"]
-mod-ai-advanced = []
+default = [
+    "mod-profiles",
+    "mod-ai",
+    "mod-ai-advanced",
+    "mod-pro",
+    "mod-feedback",
+    "mod-updater",
+    "mod-crash",
+    "mod-integrations",
+    "mod-scheduler",
+]
+
+mod-profiles = []
+mod-ai = []
+mod-ai-advanced = ["mod-ai"]
+mod-pro = ["mod-integrations"]
+mod-feedback = []
+mod-updater = []
+mod-crash = []
+mod-integrations = []
+mod-scheduler = []
+mod-support-page = []
+mod-background = []
+builder = []
 
 [dependencies]
 thiserror.workspace = true

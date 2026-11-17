@@ -1,0 +1,28 @@
+[module]
+key = "sample_module"
+label_en = "Sample Module"
+label_id = "Modul Sampel"
+cargo_feature = "mod-sample-module"
+depends_on = []
+conflicts_with = []
+
+[[module.features]]
+key = "advanced_reports"
+default = true
+locked_when = "has_active_sample_data"
+
+[module.provides]
+menus = ["sample_module"]
+permissions = ["sample_module:view", "sample_module:manage"]
+entities = ["sample_records"]
+jobs = ["sample_job"]
+integrations = []
+settings_sections = ["sample_module"]
+ai_context_providers = ["sample_module"]
+
+[module.extra]
+sample_field = "sample_value"
+retention_days = 30
+[module.extra.nested]
+level = "deep"
+count = 42

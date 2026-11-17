@@ -1,0 +1,7 @@
+[module]
+key = "alpha_mod"
+label_en = "Alpha"
+label_id = "Alfa"
+cargo_feature = "mod-alpha"
+depends_on = []
+conflicts_with = ["beta_mod"]

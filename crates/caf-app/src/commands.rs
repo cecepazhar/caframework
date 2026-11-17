@@ -1,9 +1,15 @@
 //! Thin Tauri command bindings for CAFramework.
 
+#[cfg(feature = "mod-ai")]
+use caf_core::ai;
 use caf_core::api::policy::guarded;
-use caf_core::{
-    CafError, ai, backup, crash, feedback, notes, prefs, profiles, rbac, session, vault,
-};
+#[cfg(feature = "mod-crash")]
+use caf_core::crash;
+#[cfg(feature = "mod-feedback")]
+use caf_core::feedback;
+#[cfg(feature = "mod-profiles")]
+use caf_core::profiles;
+use caf_core::{CafError, backup, notes, prefs, rbac, session, vault};
 
 async fn run_blocking<F, R>(f: F) -> Result<R, CafError>
 where
@@ -109,11 +115,13 @@ pub async fn reset_vault() -> Result<(), CafError> {
 }
 
 // Profile commands
+#[cfg(feature = "mod-profiles")]
 #[tauri::command]
 pub async fn list_profiles() -> Result<Vec<profiles::ProfileRecord>, CafError> {
     run_guarded("list_profiles", profiles::list_profiles).await
 }
 
+#[cfg(feature = "mod-profiles")]
 #[tauri::command]
 pub async fn save_profile(
     input: profiles::ProfileInput,
@@ -121,11 +129,13 @@ pub async fn save_profile(
     run_guarded("save_profile", move || profiles::save_profile(input)).await
 }
 
+#[cfg(feature = "mod-profiles")]
 #[tauri::command]
 pub async fn delete_profile(id: String) -> Result<(), CafError> {
     run_guarded("delete_profile", move || profiles::delete_profile(&id)).await
 }
 
+#[cfg(feature = "mod-profiles")]
 #[tauri::command]
 pub async fn verify_pin(profile_id: String, pin: String) -> Result<bool, CafError> {
     run_guarded("verify_pin", move || {
@@ -134,6 +144,7 @@ pub async fn verify_pin(profile_id: String, pin: String) -> Result<bool, CafErro
     .await
 }
 
+#[cfg(feature = "mod-profiles")]
 #[tauri::command]
 pub async fn profile_unlock(
     profile_id: String,
@@ -145,6 +156,7 @@ pub async fn profile_unlock(
     .await
 }
 
+#[cfg(feature = "mod-profiles")]
 #[tauri::command]
 pub async fn profile_lock() -> Result<(), CafError> {
     run_guarded("profile_lock", session::profile_lock).await
@@ -206,26 +218,31 @@ pub async fn get_notes_summary() -> Result<Vec<caf_core::visibility::OwnerSummar
 }
 
 // AI commands
+#[cfg(feature = "mod-ai")]
 #[tauri::command]
 pub async fn get_ai_settings() -> Result<ai::AiSettings, CafError> {
     run_guarded("get_ai_settings", ai::get_settings).await
 }
 
+#[cfg(feature = "mod-ai")]
 #[tauri::command]
 pub async fn save_ai_settings(settings: ai::AiSettings) -> Result<(), CafError> {
     run_guarded("save_ai_settings", move || ai::save_settings(&settings)).await
 }
 
+#[cfg(feature = "mod-ai")]
 #[tauri::command]
 pub async fn set_ai_api_key(api_key: String) -> Result<(), CafError> {
     run_guarded("set_ai_api_key", move || ai::set_ai_api_key(&api_key)).await
 }
 
+#[cfg(feature = "mod-ai")]
 #[tauri::command]
 pub async fn clear_ai_api_key() -> Result<(), CafError> {
     run_guarded("clear_ai_api_key", ai::clear_ai_api_key).await
 }
 
+#[cfg(feature = "mod-ai")]
 #[tauri::command]
 pub async fn ai_preview_context(level: ai::PrivacyLevel) -> Result<ai::ContextPayload, CafError> {
     run_guarded("ai_preview_context", move || {
@@ -234,6 +251,7 @@ pub async fn ai_preview_context(level: ai::PrivacyLevel) -> Result<ai::ContextPa
     .await
 }
 
+#[cfg(feature = "mod-ai")]
 #[tauri::command]
 pub async fn ai_chat(
     prompt: String,
@@ -384,6 +402,7 @@ pub async fn ai_dispatch_task_with_skill(
 }
 
 // Feedback & Crash commands
+#[cfg(feature = "mod-feedback")]
 #[tauri::command]
 pub async fn submit_feedback(
     rating: i32,
@@ -397,11 +416,13 @@ pub async fn submit_feedback(
     .await
 }
 
+#[cfg(feature = "mod-crash")]
 #[tauri::command]
 pub async fn get_pending_crash_report() -> Result<Option<crash::ScrubbedCrashReport>, CafError> {
     run_guarded("get_pending_crash_report", crash::pending_crash_report).await
 }
 
+#[cfg(feature = "mod-crash")]
 #[tauri::command]
 pub async fn dismiss_crash_report(id: String, never_again: Option<bool>) -> Result<(), CafError> {
     run_guarded("dismiss_crash_report", move || {
@@ -442,6 +463,7 @@ pub async fn set_performance_prefs(prefs: prefs::PerformancePrefs) -> Result<(),
 }
 
 // Scheduler commands (P08)
+#[cfg(feature = "mod-scheduler")]
 #[tauri::command]
 pub async fn scheduler_list_jobs() -> Result<Vec<caf_core::scheduler::JobStatusDto>, CafError> {
     run_guarded("scheduler_list_jobs", || {
@@ -450,6 +472,7 @@ pub async fn scheduler_list_jobs() -> Result<Vec<caf_core::scheduler::JobStatusD
     .await
 }
 
+#[cfg(feature = "mod-scheduler")]
 #[tauri::command]
 pub async fn scheduler_set_job_enabled(key: String, enabled: bool) -> Result<(), CafError> {
     run_guarded("scheduler_set_job_enabled", move || {
@@ -458,6 +481,7 @@ pub async fn scheduler_set_job_enabled(key: String, enabled: bool) -> Result<(),
     .await
 }
 
+#[cfg(feature = "mod-scheduler")]
 #[tauri::command]
 pub async fn scheduler_update_schedule(key: String, schedule: String) -> Result<(), CafError> {
     run_guarded("scheduler_update_schedule", move || {
@@ -466,12 +490,14 @@ pub async fn scheduler_update_schedule(key: String, schedule: String) -> Result<
     .await
 }
 
+#[cfg(feature = "mod-scheduler")]
 #[tauri::command]
 pub async fn scheduler_run_job_now(key: String) -> Result<String, CafError> {
     guarded("scheduler_run_job_now", || Ok(()))?;
     caf_core::scheduler::run_job_now(&key).await
 }
 
+#[cfg(feature = "mod-scheduler")]
 #[tauri::command]
 pub async fn scheduler_get_history(
     key: Option<String>,
@@ -486,6 +512,7 @@ pub async fn scheduler_get_history(
     .await
 }
 
+#[cfg(feature = "mod-scheduler")]
 #[tauri::command]
 pub async fn scheduler_get_desktop_settings()
 -> Result<caf_core::scheduler::SchedulerDesktopSettings, CafError> {
@@ -495,6 +522,7 @@ pub async fn scheduler_get_desktop_settings()
     .await
 }
 
+#[cfg(feature = "mod-scheduler")]
 #[tauri::command]
 pub async fn scheduler_set_desktop_settings(
     settings: caf_core::scheduler::SchedulerDesktopSettings,
@@ -506,6 +534,7 @@ pub async fn scheduler_set_desktop_settings(
 }
 
 // Integrations & Outbox (P09)
+#[cfg(feature = "mod-integrations")]
 #[tauri::command]
 pub async fn list_integrations()
 -> Result<Vec<caf_core::integrations::IntegrationStatusDto>, CafError> {
@@ -515,6 +544,7 @@ pub async fn list_integrations()
     .await
 }
 
+#[cfg(feature = "mod-integrations")]
 #[tauri::command]
 pub async fn set_integration_secret(key: String, secret: String) -> Result<(), CafError> {
     run_guarded("set_integration_secret", move || {
@@ -523,6 +553,7 @@ pub async fn set_integration_secret(key: String, secret: String) -> Result<(), C
     .await
 }
 
+#[cfg(feature = "mod-integrations")]
 #[tauri::command]
 pub async fn delete_integration_secret(key: String) -> Result<(), CafError> {
     run_guarded("delete_integration_secret", move || {
@@ -531,6 +562,7 @@ pub async fn delete_integration_secret(key: String) -> Result<(), CafError> {
     .await
 }
 
+#[cfg(feature = "mod-integrations")]
 #[tauri::command]
 pub async fn test_integration_connection(
     key: String,
@@ -539,6 +571,7 @@ pub async fn test_integration_connection(
     caf_core::integrations::test_integration_connection(&key).await
 }
 
+#[cfg(feature = "mod-integrations")]
 #[tauri::command]
 pub async fn get_integration_logs(
     key: Option<String>,
@@ -553,6 +586,7 @@ pub async fn get_integration_logs(
     .await
 }
 
+#[cfg(feature = "mod-integrations")]
 #[tauri::command]
 pub async fn get_outbox_items(
     status: Option<caf_core::integrations::OutboxStatus>,
@@ -567,6 +601,7 @@ pub async fn get_outbox_items(
     .await
 }
 
+#[cfg(feature = "mod-integrations")]
 #[tauri::command]
 pub async fn flush_outbox_now() -> Result<caf_core::integrations::outbox::FlushSummary, CafError> {
     guarded("flush_outbox_now", || Ok(()))?;
@@ -640,17 +675,20 @@ pub async fn execute_import(
 }
 
 // Pro licensing commands (FR-8, P11)
+#[cfg(feature = "mod-pro")]
 #[tauri::command]
 pub async fn pro_status() -> Result<caf_core::pro::ProStatus, CafError> {
     run_guarded("pro_status", caf_core::pro::get_pro_status).await
 }
 
+#[cfg(feature = "mod-pro")]
 #[tauri::command]
 pub async fn pro_server_available() -> Result<bool, CafError> {
     guarded("pro_server_available", || Ok(()))?;
     caf_core::pro::pro_server_available().await
 }
 
+#[cfg(feature = "mod-pro")]
 #[tauri::command]
 pub async fn pro_register(
     email: String,
@@ -662,18 +700,21 @@ pub async fn pro_register(
     caf_core::pro::pro_register(email, password, name, locale).await
 }
 
+#[cfg(feature = "mod-pro")]
 #[tauri::command]
 pub async fn pro_resend_verification(email: String) -> Result<(), CafError> {
     guarded("pro_resend_verification", || Ok(()))?;
     caf_core::pro::pro_resend_verification(email).await
 }
 
+#[cfg(feature = "mod-pro")]
 #[tauri::command]
 pub async fn pro_forgot_password(email: String, locale: Option<String>) -> Result<(), CafError> {
     guarded("pro_forgot_password", || Ok(()))?;
     caf_core::pro::pro_forgot_password(email, locale).await
 }
 
+#[cfg(feature = "mod-pro")]
 #[tauri::command]
 pub async fn pro_login(
     email: String,
@@ -683,29 +724,34 @@ pub async fn pro_login(
     caf_core::pro::pro_login(email, password).await
 }
 
+#[cfg(feature = "mod-pro")]
 #[tauri::command]
 pub async fn pro_start_trial() -> Result<caf_core::pro::SyncOutcome, CafError> {
     guarded("pro_start_trial", || Ok(()))?;
     caf_core::pro::pro_start_trial().await
 }
 
+#[cfg(feature = "mod-pro")]
 #[tauri::command]
 pub async fn pro_account() -> Result<caf_core::pro::AccountDetails, CafError> {
     guarded("pro_account", || Ok(()))?;
     caf_core::pro::pro_account().await
 }
 
+#[cfg(feature = "mod-pro")]
 #[tauri::command]
 pub async fn pro_revoke_device(device_id: String) -> Result<(), CafError> {
     guarded("pro_revoke_device", || Ok(()))?;
     caf_core::pro::pro_revoke_device(device_id).await
 }
 
+#[cfg(feature = "mod-pro")]
 #[tauri::command]
 pub async fn pro_logout() -> Result<(), CafError> {
     run_guarded("pro_logout", caf_core::pro::pro_logout).await
 }
 
+#[cfg(feature = "mod-pro")]
 #[tauri::command]
 pub async fn pro_gated_action() -> Result<String, CafError> {
     run_guarded("pro_gated_action", caf_core::pro::pro_gated_action).await

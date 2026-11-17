@@ -21,31 +21,41 @@
     )
 )]
 
+#[cfg(feature = "mod-ai")]
 pub mod ai;
+#[cfg(feature = "mod-ai")]
 pub mod ai_context;
+#[cfg(feature = "mod-ai")]
 pub mod ai_context_notes;
 pub mod api;
 pub mod audit;
 pub mod backoff;
 pub mod backup;
+#[cfg(feature = "mod-pro")]
 pub mod billing;
+#[cfg(feature = "mod-crash")]
 pub mod crash;
 pub mod data_io;
 pub mod db;
 pub mod dual_split;
 pub mod error;
+#[cfg(feature = "mod-feedback")]
 pub mod feedback;
 pub mod generated;
 pub mod http;
+#[cfg(feature = "mod-integrations")]
 pub mod integrations;
 pub mod keyring;
 pub mod migrations;
 pub mod notes;
 pub mod paths;
 pub mod prefs;
+#[cfg(feature = "mod-pro")]
 pub mod pro;
+#[cfg(feature = "mod-profiles")]
 pub mod profiles;
 pub mod rbac;
+#[cfg(feature = "mod-scheduler")]
 pub mod scheduler;
 pub mod secret;
 pub mod session;

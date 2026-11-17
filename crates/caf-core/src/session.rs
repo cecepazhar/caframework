@@ -1,6 +1,8 @@
 //! Core session and authorization state management.
 
-use crate::error::{AuthError, CafError, DbError, VaultError};
+#[cfg(feature = "mod-profiles")]
+use crate::error::DbError;
+use crate::error::{AuthError, CafError, VaultError};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::sync::RwLock;
@@ -134,20 +136,30 @@ pub fn profile_unlock(profile_id: &str, pin: &str) -> Result<SessionInfo, CafErr
         return Err(CafError::Vault(VaultError::Locked));
     }
 
-    let ok = crate::profiles::verify_pin(profile_id, pin)?;
-    if !ok {
-        return Err(CafError::Auth(AuthError::InvalidPin));
+    #[cfg(feature = "mod-profiles")]
+    {
+        let ok = crate::profiles::verify_pin(profile_id, pin)?;
+        if !ok {
+            return Err(CafError::Auth(AuthError::InvalidPin));
+        }
+
+        let profile = crate::profiles::get_profile(profile_id)?
+            .ok_or(CafError::Db(DbError::RecordNotFound))?;
+
+        let perms = crate::rbac::get_role_permissions(&profile.role)?;
+        let session = Session::with_details(&profile.id, &profile.name, &profile.role, perms);
+        let info = session.to_info();
+        set_current_session(session)?;
+
+        Ok(info)
     }
-
-    let profile =
-        crate::profiles::get_profile(profile_id)?.ok_or(CafError::Db(DbError::RecordNotFound))?;
-
-    let perms = crate::rbac::get_role_permissions(&profile.role)?;
-    let session = Session::with_details(&profile.id, &profile.name, &profile.role, perms);
-    let info = session.to_info();
-    set_current_session(session)?;
-
-    Ok(info)
+    #[cfg(not(feature = "mod-profiles"))]
+    {
+        let _ = (profile_id, pin);
+        Err(CafError::generic(
+            "Profiles module is not compiled into this binary",
+        ))
+    }
 }
 
 /// Ends the active profile session.

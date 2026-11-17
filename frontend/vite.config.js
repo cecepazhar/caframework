@@ -3,11 +3,57 @@ import { sveltekit } from "@sveltejs/kit/vite";
 import tailwindcss from "@tailwindcss/vite";
 // @ts-expect-error type error without @types/node package
 import process from "node:process";
+import {
+  getEnabledModules,
+  stashDisabledModules,
+  restoreDisabledModules,
+} from "./scripts/modules-exclusion.js";
+
 const host = process.env.TAURI_DEV_HOST;
+const enabledModules = getEnabledModules();
+
+function cafModuleExclusionPlugin() {
+  return {
+    name: "caf-module-exclusion",
+    configResolved(config) {
+      if (config.command === "build") {
+        stashDisabledModules();
+      }
+    },
+    buildEnd() {
+      restoreDisabledModules();
+    },
+    closeBundle() {
+      restoreDisabledModules();
+    },
+  };
+}
+
+// Safety handlers so stashed routes are always restored
+process.on("exit", () => {
+  restoreDisabledModules();
+});
+process.on("SIGINT", () => {
+  restoreDisabledModules();
+  process.exit(130);
+});
+process.on("SIGTERM", () => {
+  restoreDisabledModules();
+  process.exit(143);
+});
+
+const defines = {
+  "import.meta.env.CAF_ENABLED_MODULES": JSON.stringify(enabledModules),
+};
+for (const [mod, val] of Object.entries(enabledModules)) {
+  const normKey = mod.toUpperCase().replace(/-/g, "_");
+  defines[`__CAF_MOD_${normKey}__`] = JSON.stringify(val);
+}
 
 // https://vite.dev/config/
 export default defineConfig(() => ({
-  plugins: [tailwindcss(), sveltekit()],
+  plugins: [cafModuleExclusionPlugin(), tailwindcss(), sveltekit()],
+  define: defines,
   test: {
     environment: "jsdom",
   },

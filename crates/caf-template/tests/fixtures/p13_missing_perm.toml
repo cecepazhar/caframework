@@ -1,0 +1,16 @@
+[module]
+key = "perm_provider"
+label_en = "Perm Provider"
+label_id = "Penyedia Hak Akses"
+cargo_feature = "mod-perm-provider"
+depends_on = []
+conflicts_with = []
+
+[module.provides]
+menus = []
+permissions = ["nonexistent_perm_defined_nowhere:action"]
+entities = []
+jobs = []
+integrations = []
+settings_sections = []
+ai_context_providers = []

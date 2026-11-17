@@ -413,9 +413,16 @@ pub fn chat(
 
     if cfg.mode == AiMode::Hosted {
         // Hosted requires modules.pro & valid license
-        let pro_status = crate::pro::get_pro_status()?;
-        if !pro_status.is_pro {
-            return Err(CafError::Ai(AiError::QuotaExceeded));
+        #[cfg(feature = "mod-pro")]
+        {
+            let pro_status = crate::pro::get_pro_status()?;
+            if !pro_status.is_pro {
+                return Err(CafError::Ai(AiError::QuotaExceeded));
+            }
+        }
+        #[cfg(not(feature = "mod-pro"))]
+        {
+            return Err(CafError::Ai(AiError::Disabled));
         }
     }
 

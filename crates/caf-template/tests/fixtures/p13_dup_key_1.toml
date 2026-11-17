@@ -1,0 +1,7 @@
+[module]
+key = "dup_key"
+label_en = "Module A"
+label_id = "Modul A"
+cargo_feature = "mod-dup"
+depends_on = []
+conflicts_with = []

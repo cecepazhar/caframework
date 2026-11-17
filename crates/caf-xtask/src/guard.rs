@@ -68,6 +68,11 @@ pub fn run_guard(only: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
         check_string_err(&root, &mut failures)?;
     }
 
+    // (i) Gated commands check (P13.3)
+    if should_run("gated_commands", only) {
+        check_gated_commands(&root, &mut failures)?;
+    }
+
     if !failures.is_empty() {
         for f in &failures {
             eprintln!("{}", f);
@@ -685,5 +690,165 @@ fn check_string_err(
             }
         }
     }
+    Ok(())
+}
+
+fn check_gated_commands(
+    root: &Path,
+    failures: &mut Vec<String>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let app_toml_path = env::var("CAF_APP_TOML")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| root.join("app.toml"));
+
+    if !app_toml_path.exists() {
+        return Ok(());
+    }
+
+    let toml_str = fs::read_to_string(&app_toml_path)?;
+    let parsed: toml::Value = toml::from_str(&toml_str)?;
+
+    let mut disabled_modules = HashSet::new();
+    if let Some(modules_tbl) = parsed.get("modules").and_then(|m| m.as_table()) {
+        for (k, v) in modules_tbl {
+            if v.as_bool() == Some(false) {
+                disabled_modules.insert(k.as_str());
+            }
+        }
+    }
+
+    if disabled_modules.is_empty() {
+        return Ok(());
+    }
+
+    let module_commands: &[(&str, &[&str])] = &[
+        (
+            "profiles",
+            &[
+                "list_profiles",
+                "save_profile",
+                "delete_profile",
+                "verify_pin",
+                "profile_unlock",
+                "profile_lock",
+            ],
+        ),
+        (
+            "ai",
+            &[
+                "get_ai_settings",
+                "save_ai_settings",
+                "set_ai_api_key",
+                "clear_ai_api_key",
+                "ai_preview_context",
+                "ai_chat",
+            ],
+        ),
+        (
+            "ai_advanced",
+            &[
+                "ai_get_providers",
+                "ai_save_provider",
+                "ai_delete_provider",
+                "ai_get_routing_matrix",
+                "ai_save_routing_rule",
+                "ai_get_personas",
+                "ai_save_persona",
+                "ai_delete_persona",
+                "ai_get_habits",
+                "ai_search_habits",
+                "ai_toggle_habit_pin",
+                "ai_delete_habit",
+                "ai_get_skills",
+                "ai_save_skill",
+                "ai_delete_skill",
+                "ai_dispatch_task",
+                "ai_dispatch_task_with_skill",
+            ],
+        ),
+        ("feedback", &["submit_feedback"]),
+        (
+            "crash",
+            &["get_pending_crash_report", "dismiss_crash_report"],
+        ),
+        (
+            "pro",
+            &[
+                "pro_status",
+                "pro_server_available",
+                "pro_register",
+                "pro_resend_verification",
+                "pro_forgot_password",
+                "pro_login",
+                "pro_start_trial",
+                "pro_account",
+                "pro_revoke_device",
+                "pro_logout",
+                "pro_gated_action",
+            ],
+        ),
+        (
+            "integrations",
+            &[
+                "list_integrations",
+                "set_integration_secret",
+                "delete_integration_secret",
+                "test_integration_connection",
+                "get_integration_logs",
+                "get_outbox_items",
+                "flush_outbox_now",
+            ],
+        ),
+        (
+            "scheduler",
+            &[
+                "scheduler_list_jobs",
+                "scheduler_set_job_enabled",
+                "scheduler_update_schedule",
+                "scheduler_run_job_now",
+                "scheduler_get_history",
+                "scheduler_get_desktop_settings",
+                "scheduler_set_desktop_settings",
+            ],
+        ),
+    ];
+
+    // Check capabilities/default.json
+    let cap_path = root.join("crates/caf-app/capabilities/default.json");
+    let cap_content = if cap_path.exists() {
+        fs::read_to_string(&cap_path).unwrap_or_default()
+    } else {
+        String::new()
+    };
+
+    // Check frontend/src/lib/api/generated_bindings.ts
+    let bindings_path = root.join("frontend/src/lib/api/generated_bindings.ts");
+    let bindings_content = if bindings_path.exists() {
+        fs::read_to_string(&bindings_path).unwrap_or_default()
+    } else {
+        String::new()
+    };
+
+    for &(mod_name, cmds) in module_commands {
+        if disabled_modules.contains(mod_name) {
+            for &cmd in cmds {
+                let allow_perm = format!("allow-{}", cmd.replace('_', "-"));
+                if !cap_content.is_empty() && cap_content.contains(&allow_perm) {
+                    failures.push(format!(
+                        "gated_commands: module '{}' is disabled in app.toml, but command '{}' is leaked in capabilities/default.json",
+                        mod_name, cmd
+                    ));
+                }
+                let invoke_fn = format!("invoke('{}'", cmd);
+                if !bindings_content.is_empty() && bindings_content.contains(&invoke_fn) {
+                    failures.push(format!(
+                        "gated_commands: module '{}' is disabled in app.toml, but command '{}' is leaked in generated_bindings.ts",
+                        mod_name, cmd
+                    ));
+                }
+            }
+        }
+    }
+
     Ok(())
 }

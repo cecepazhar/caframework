@@ -19,11 +19,17 @@ const COMMANDS: &[&str] = &[
     "change_master_password",
     "reset_vault",
     // Multi-Profile & RBAC
+    #[cfg(feature = "mod-profiles")]
     "list_profiles",
+    #[cfg(feature = "mod-profiles")]
     "save_profile",
+    #[cfg(feature = "mod-profiles")]
     "delete_profile",
+    #[cfg(feature = "mod-profiles")]
     "verify_pin",
+    #[cfg(feature = "mod-profiles")]
     "profile_unlock",
+    #[cfg(feature = "mod-profiles")]
     "profile_lock",
     "session_info",
     "list_roles",
@@ -35,11 +41,17 @@ const COMMANDS: &[&str] = &[
     "delete_note",
     "get_notes_summary",
     // Generic AI
+    #[cfg(feature = "mod-ai")]
     "get_ai_settings",
+    #[cfg(feature = "mod-ai")]
     "save_ai_settings",
+    #[cfg(feature = "mod-ai")]
     "set_ai_api_key",
+    #[cfg(feature = "mod-ai")]
     "clear_ai_api_key",
+    #[cfg(feature = "mod-ai")]
     "ai_preview_context",
+    #[cfg(feature = "mod-ai")]
     "ai_chat",
     // Unified Master AI Engine
     #[cfg(feature = "mod-ai-advanced")]
@@ -77,8 +89,11 @@ const COMMANDS: &[&str] = &[
     #[cfg(feature = "mod-ai-advanced")]
     "ai_dispatch_task_with_skill",
     // Feedback & Crash Reporting
+    #[cfg(feature = "mod-feedback")]
     "submit_feedback",
+    #[cfg(feature = "mod-crash")]
     "get_pending_crash_report",
+    #[cfg(feature = "mod-crash")]
     "dismiss_crash_report",
     // Backup & Restore
     "export_encrypted_backup",
@@ -87,20 +102,34 @@ const COMMANDS: &[&str] = &[
     "get_performance_prefs",
     "set_performance_prefs",
     // Scheduler (P08)
+    #[cfg(feature = "mod-scheduler")]
     "scheduler_list_jobs",
+    #[cfg(feature = "mod-scheduler")]
     "scheduler_set_job_enabled",
+    #[cfg(feature = "mod-scheduler")]
     "scheduler_update_schedule",
+    #[cfg(feature = "mod-scheduler")]
     "scheduler_run_job_now",
+    #[cfg(feature = "mod-scheduler")]
     "scheduler_get_history",
+    #[cfg(feature = "mod-scheduler")]
     "scheduler_get_desktop_settings",
+    #[cfg(feature = "mod-scheduler")]
     "scheduler_set_desktop_settings",
     // Integrations & Outbox (P09)
+    #[cfg(feature = "mod-integrations")]
     "list_integrations",
+    #[cfg(feature = "mod-integrations")]
     "set_integration_secret",
+    #[cfg(feature = "mod-integrations")]
     "delete_integration_secret",
+    #[cfg(feature = "mod-integrations")]
     "test_integration_connection",
+    #[cfg(feature = "mod-integrations")]
     "get_integration_logs",
+    #[cfg(feature = "mod-integrations")]
     "get_outbox_items",
+    #[cfg(feature = "mod-integrations")]
     "flush_outbox_now",
     // Data Import / Export (P10)
     "list_entities",
@@ -110,16 +139,27 @@ const COMMANDS: &[&str] = &[
     "preview_import_data",
     "execute_import",
     // Pro licensing
+    #[cfg(feature = "mod-pro")]
     "pro_status",
+    #[cfg(feature = "mod-pro")]
     "pro_server_available",
+    #[cfg(feature = "mod-pro")]
     "pro_register",
+    #[cfg(feature = "mod-pro")]
     "pro_resend_verification",
+    #[cfg(feature = "mod-pro")]
     "pro_forgot_password",
+    #[cfg(feature = "mod-pro")]
     "pro_login",
+    #[cfg(feature = "mod-pro")]
     "pro_start_trial",
+    #[cfg(feature = "mod-pro")]
     "pro_account",
+    #[cfg(feature = "mod-pro")]
     "pro_revoke_device",
+    #[cfg(feature = "mod-pro")]
     "pro_logout",
+    #[cfg(feature = "mod-pro")]
     "pro_gated_action",
 ];
 

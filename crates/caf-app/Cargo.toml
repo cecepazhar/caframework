@@ -12,8 +12,30 @@ name = "caf_app_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [features]
-default = ["mod-ai-advanced"]
-mod-ai-advanced = ["caf-core/mod-ai-advanced"]
+default = [
+    "mod-profiles",
+    "mod-ai",
+    "mod-ai-advanced",
+    "mod-pro",
+    "mod-feedback",
+    "mod-updater",
+    "mod-crash",
+    "mod-integrations",
+    "mod-scheduler",
+]
+
+mod-profiles = ["caf-core/mod-profiles"]
+mod-ai = ["caf-core/mod-ai"]
+mod-ai-advanced = ["caf-core/mod-ai-advanced", "mod-ai"]
+mod-pro = ["caf-core/mod-pro", "mod-integrations"]
+mod-feedback = ["caf-core/mod-feedback"]
+mod-updater = ["caf-core/mod-updater"]
+mod-crash = ["caf-core/mod-crash"]
+mod-integrations = ["caf-core/mod-integrations"]
+mod-scheduler = ["caf-core/mod-scheduler"]
+mod-support-page = ["caf-core/mod-support-page"]
+mod-background = ["caf-core/mod-background"]
+builder = ["caf-core/builder"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

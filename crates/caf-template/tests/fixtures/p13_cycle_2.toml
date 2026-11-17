@@ -1,0 +1,7 @@
+[module]
+key = "node_b"
+label_en = "Node B"
+label_id = "Simpul B"
+cargo_feature = "mod-node-b"
+depends_on = ["node_a"]
+conflicts_with = []

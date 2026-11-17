@@ -12,7 +12,16 @@ fn get_workspace_root() -> PathBuf {
 
 fn bin_path() -> PathBuf {
     if let Ok(p) = std::env::var("CARGO_BIN_EXE_caf-xtask") {
-        return PathBuf::from(p);
+        let pb = PathBuf::from(p);
+        if pb.exists() {
+            return pb;
+        }
+    }
+    if let Ok(home) = std::env::var("HOME") {
+        let shared = PathBuf::from(home).join(".cargo/shared-target/debug/caf-xtask");
+        if shared.exists() {
+            return shared;
+        }
     }
     let mut p = get_workspace_root();
     p.push("target");
@@ -171,6 +180,8 @@ fn test_ledger_guard_fails_on_tamper() {
     let output = Command::new(bin_path())
         .args(["guard", "--only", "ledger"])
         .env("CAF_PLAN_DIR", &temp_root)
+        .env("CAF_GUARD_ROOT", &temp_root)
+        .current_dir(&temp_root)
         .output()
         .expect("Failed to run caf-xtask guard");
 
@@ -216,6 +227,7 @@ fn test_invoke_guard_fails_on_fixture() {
     let output = Command::new(bin_path())
         .args(["guard", "--only", "invoke_registry"])
         .env("CAF_GUARD_ROOT", &temp_root)
+        .current_dir(&temp_root)
         .output()
         .expect("Failed to run caf-xtask guard");
 
@@ -230,5 +242,67 @@ fn test_invoke_guard_fails_on_fixture() {
     assert!(
         stderr.contains("invoke() is only allowed in generated bindings"),
         "Must flag forbidden invoke() call in non-generated file: {stderr}"
+    );
+}
+
+#[test]
+fn test_gated_commands_fails_on_leak() {
+    let temp_root =
+        std::env::temp_dir().join(format!("caf_gated_commands_test_{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&temp_root);
+    std::fs::create_dir_all(&temp_root).expect("create temp fixture dir");
+
+    struct Cleanup(PathBuf);
+    impl Drop for Cleanup {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+    let _cleanup = Cleanup(temp_root.clone());
+
+    // 1. app.toml with feedback = false
+    let toml_content = r#"
+[app]
+name = "Test"
+slug = "test"
+code = "TST"
+identifier = "com.test.app"
+
+[modules]
+feedback = false
+"#;
+    std::fs::write(temp_root.join("app.toml"), toml_content).expect("write app.toml");
+
+    // 2. crates/caf-app/capabilities/default.json leaking allow-submit-feedback
+    let cap_dir = temp_root.join("crates/caf-app/capabilities");
+    std::fs::create_dir_all(&cap_dir).expect("create cap dir");
+    let cap_content = r#"{
+  "permissions": [
+    "allow-submit-feedback"
+  ]
+}"#;
+    std::fs::write(cap_dir.join("default.json"), cap_content).expect("write default.json");
+
+    let output = Command::new(bin_path())
+        .args(["guard", "--only", "gated_commands"])
+        .env("CAF_GUARD_ROOT", &temp_root)
+        .env("CAF_APP_TOML", temp_root.join("app.toml"))
+        .current_dir(&temp_root)
+        .output()
+        .expect("Failed to run caf-xtask guard");
+
+    assert!(
+        !output.status.success(),
+        "Guard must fail when disabled module command leaks in capabilities"
+    );
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    println!("Gated commands fixture output:\n{}", stderr);
+
+    assert!(
+        stderr.contains(
+            "module 'feedback' is disabled in app.toml, but command 'submit_feedback' is leaked"
+        ),
+        "Must detect leaked submit_feedback: {stderr}"
     );
 }

@@ -1,0 +1,7 @@
+[module]
+key = "beta_mod"
+label_en = "Beta"
+label_id = "Beta"
+cargo_feature = "mod-beta"
+depends_on = []
+conflicts_with = []

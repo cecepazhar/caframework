@@ -123,11 +123,17 @@ pub fn run_with_start(start: std::time::Instant) {
             commands::lock_vault,
             commands::change_master_password,
             commands::reset_vault,
+            #[cfg(feature = "mod-profiles")]
             commands::list_profiles,
+            #[cfg(feature = "mod-profiles")]
             commands::save_profile,
+            #[cfg(feature = "mod-profiles")]
             commands::delete_profile,
+            #[cfg(feature = "mod-profiles")]
             commands::verify_pin,
+            #[cfg(feature = "mod-profiles")]
             commands::profile_unlock,
+            #[cfg(feature = "mod-profiles")]
             commands::profile_lock,
             commands::session_info,
             commands::list_roles,
@@ -137,11 +143,17 @@ pub fn run_with_start(start: std::time::Instant) {
             commands::save_note,
             commands::delete_note,
             commands::get_notes_summary,
+            #[cfg(feature = "mod-ai")]
             commands::get_ai_settings,
+            #[cfg(feature = "mod-ai")]
             commands::save_ai_settings,
+            #[cfg(feature = "mod-ai")]
             commands::set_ai_api_key,
+            #[cfg(feature = "mod-ai")]
             commands::clear_ai_api_key,
+            #[cfg(feature = "mod-ai")]
             commands::ai_preview_context,
+            #[cfg(feature = "mod-ai")]
             commands::ai_chat,
             #[cfg(feature = "mod-ai-advanced")]
             commands::ai_get_providers,
@@ -177,26 +189,43 @@ pub fn run_with_start(start: std::time::Instant) {
             commands::ai_dispatch_task,
             #[cfg(feature = "mod-ai-advanced")]
             commands::ai_dispatch_task_with_skill,
+            #[cfg(feature = "mod-feedback")]
             commands::submit_feedback,
+            #[cfg(feature = "mod-crash")]
             commands::get_pending_crash_report,
+            #[cfg(feature = "mod-crash")]
             commands::dismiss_crash_report,
             commands::export_encrypted_backup,
             commands::import_encrypted_backup,
             commands::get_performance_prefs,
             commands::set_performance_prefs,
+            #[cfg(feature = "mod-scheduler")]
             commands::scheduler_list_jobs,
+            #[cfg(feature = "mod-scheduler")]
             commands::scheduler_set_job_enabled,
+            #[cfg(feature = "mod-scheduler")]
             commands::scheduler_update_schedule,
+            #[cfg(feature = "mod-scheduler")]
             commands::scheduler_run_job_now,
+            #[cfg(feature = "mod-scheduler")]
             commands::scheduler_get_history,
+            #[cfg(feature = "mod-scheduler")]
             commands::scheduler_get_desktop_settings,
+            #[cfg(feature = "mod-scheduler")]
             commands::scheduler_set_desktop_settings,
+            #[cfg(feature = "mod-integrations")]
             commands::list_integrations,
+            #[cfg(feature = "mod-integrations")]
             commands::set_integration_secret,
+            #[cfg(feature = "mod-integrations")]
             commands::delete_integration_secret,
+            #[cfg(feature = "mod-integrations")]
             commands::test_integration_connection,
+            #[cfg(feature = "mod-integrations")]
             commands::get_integration_logs,
+            #[cfg(feature = "mod-integrations")]
             commands::get_outbox_items,
+            #[cfg(feature = "mod-integrations")]
             commands::flush_outbox_now,
             // Data Import / Export (P10)
             commands::list_entities,
@@ -206,16 +235,27 @@ pub fn run_with_start(start: std::time::Instant) {
             commands::preview_import_data,
             commands::execute_import,
             // Pro licensing
+            #[cfg(feature = "mod-pro")]
             commands::pro_status,
+            #[cfg(feature = "mod-pro")]
             commands::pro_server_available,
+            #[cfg(feature = "mod-pro")]
             commands::pro_register,
+            #[cfg(feature = "mod-pro")]
             commands::pro_resend_verification,
+            #[cfg(feature = "mod-pro")]
             commands::pro_forgot_password,
+            #[cfg(feature = "mod-pro")]
             commands::pro_login,
+            #[cfg(feature = "mod-pro")]
             commands::pro_start_trial,
+            #[cfg(feature = "mod-pro")]
             commands::pro_account,
+            #[cfg(feature = "mod-pro")]
             commands::pro_revoke_device,
+            #[cfg(feature = "mod-pro")]
             commands::pro_logout,
+            #[cfg(feature = "mod-pro")]
             commands::pro_gated_action,
         ])
         .run(tauri::generate_context!())

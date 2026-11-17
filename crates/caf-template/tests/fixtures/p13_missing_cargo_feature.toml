@@ -1,0 +1,7 @@
+[module]
+key = "fake_feature_mod"
+label_en = "Fake Feature"
+label_id = "Fitur Palsu"
+cargo_feature = "mod-ghost-feature"
+depends_on = []
+conflicts_with = []

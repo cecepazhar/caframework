@@ -1,0 +1,7 @@
+[module]
+key = "consumer_mod"
+label_en = "Consumer"
+label_id = "Konsumen"
+cargo_feature = "mod-consumer"
+depends_on = ["nonexistent_provider"]
+conflicts_with = []

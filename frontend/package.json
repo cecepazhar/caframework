@@ -6,7 +6,9 @@
   "scripts": {
     "test": "vitest run",
     "dev": "vite dev",
+    "prebuild": "node ./scripts/modules-exclusion.js stash",
     "build": "vite build",
+    "postbuild": "node ./scripts/modules-exclusion.js restore",
     "preview": "vite preview",
     "prepare": "svelte-kit sync || echo ''",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",

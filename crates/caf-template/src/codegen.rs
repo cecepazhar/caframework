@@ -12,6 +12,13 @@ pub struct CodegenOutput {
 }
 
 pub fn generate_all(config: &AppConfigFile) -> Vec<CodegenOutput> {
+    generate_all_with_modules(config, &[])
+}
+
+pub fn generate_all_with_modules(
+    config: &AppConfigFile,
+    modules: &[crate::module::ModuleManifestFile],
+) -> Vec<CodegenOutput> {
     let mut outputs = Vec::new();
 
     // 1. TS app.ts
@@ -394,10 +401,106 @@ pub const UPDATER_MANIFEST_URL: &str = {:?};
         content: rust_endpoints,
     });
 
-    // 11. Rust crates/caf-core/src/generated/mod.rs
+    // 11. Rust crates/caf-core/src/generated/module_extra.rs (A-01 §2a)
+    let mut rust_module_extra = format!(
+        r#"{RUST_GENERATED_HEADER}pub fn get_module_extra_json(module_key: &str) -> Option<&'static str> {{
+    match module_key {{
+"#
+    );
+    for m in modules {
+        if let Some(extra) = &m.module.extra {
+            let json_str = serde_json::to_string(extra).unwrap_or_default();
+            rust_module_extra.push_str(&format!(
+                "        {:?} => Some({:?}),\n",
+                m.module.key, json_str
+            ));
+        }
+    }
+    rust_module_extra.push_str("        _ => None,\n    }\n}\n");
+    outputs.push(CodegenOutput {
+        path: "crates/caf-core/src/generated/module_extra.rs".into(),
+        content: rust_module_extra,
+    });
+
+    // 12. TS frontend/src/lib/generated/moduleExtra.ts (A-01 §2a)
+    let mut ts_module_extra = format!(
+        r#"{GENERATED_HEADER}export const MODULE_EXTRA: Record<string, Record<string, any>> = {{
+"#
+    );
+    for m in modules {
+        if let Some(extra) = &m.module.extra {
+            let json_str = serde_json::to_string_pretty(extra).unwrap_or_default();
+            ts_module_extra.push_str(&format!("  {:?}: {},\n", m.module.key, json_str));
+        }
+    }
+    ts_module_extra.push_str("};\n");
+    outputs.push(CodegenOutput {
+        path: "frontend/src/lib/generated/moduleExtra.ts".into(),
+        content: ts_module_extra,
+    });
+
+    // 13. TS frontend/src/lib/generated/modules.ts
+    let ts_modules = format!(
+        r#"{GENERATED_HEADER}export const ENABLED_MODULES = {{
+  profiles: {},
+  ai: {},
+  pro: {},
+  feedback: {},
+  updater: {},
+  crash: {},
+  integrations: {},
+  scheduler: {},
+  supportPage: {}
+}} as const;
+"#,
+        config
+            .modules
+            .as_ref()
+            .and_then(|m| m.profiles)
+            .unwrap_or(true),
+        config.modules.as_ref().and_then(|m| m.ai).unwrap_or(true),
+        config.modules.as_ref().and_then(|m| m.pro).unwrap_or(true),
+        config
+            .modules
+            .as_ref()
+            .and_then(|m| m.feedback)
+            .unwrap_or(true),
+        config
+            .modules
+            .as_ref()
+            .and_then(|m| m.updater)
+            .unwrap_or(true),
+        config
+            .modules
+            .as_ref()
+            .and_then(|m| m.crash)
+            .unwrap_or(true),
+        config
+            .modules
+            .as_ref()
+            .and_then(|m| m.integrations)
+            .unwrap_or(true),
+        config
+            .modules
+            .as_ref()
+            .and_then(|m| m.scheduler)
+            .unwrap_or(true),
+        config
+            .modules
+            .as_ref()
+            .and_then(|m| m.support_page)
+            .unwrap_or(false),
+    );
+    outputs.push(CodegenOutput {
+        path: "frontend/src/lib/generated/modules.ts".into(),
+        content: ts_modules,
+    });
+
+    // 14. Rust crates/caf-core/src/generated/mod.rs
     let rust_mod = format!(
         r#"{RUST_GENERATED_HEADER}pub mod brand;
 pub mod endpoints;
+pub mod module_extra;
 pub mod modules;
 pub mod permissions;
 pub mod prefix;
@@ -438,12 +541,49 @@ fn format_rust(code: &str) -> String {
     code.to_string()
 }
 
+pub fn discover_modules(root: &Path) -> Vec<crate::module::ModuleManifestFile> {
+    let mut manifests = Vec::new();
+    let mod_dir = root.join("modules");
+    if mod_dir.exists()
+        && let Ok(entries) = std::fs::read_dir(mod_dir)
+    {
+        for entry in entries.flatten() {
+            let toml_path = entry.path().join("module.toml");
+            if toml_path.exists()
+                && let Ok(content) = std::fs::read_to_string(&toml_path)
+                && let Ok(manifest) = crate::module::validate_module_manifest(&content)
+            {
+                manifests.push(manifest);
+            }
+        }
+    }
+    // Also discover examples if present and no modules found
+    if manifests.is_empty() {
+        let ex_dir = root.join("docs/examples/modules");
+        if ex_dir.exists()
+            && let Ok(entries) = std::fs::read_dir(ex_dir)
+        {
+            for entry in entries.flatten() {
+                let toml_path = entry.path().join("module.toml");
+                if toml_path.exists()
+                    && let Ok(content) = std::fs::read_to_string(&toml_path)
+                    && let Ok(manifest) = crate::module::validate_module_manifest(&content)
+                {
+                    manifests.push(manifest);
+                }
+            }
+        }
+    }
+    manifests
+}
+
 pub fn run_codegen_on_root(
     root: &Path,
     config: &AppConfigFile,
     check: bool,
 ) -> Result<(), TemplateError> {
-    let outputs = generate_all(config);
+    let modules = discover_modules(root);
+    let outputs = generate_all_with_modules(config, &modules);
 
     for out in outputs {
         let target_path = root.join(&out.path);
