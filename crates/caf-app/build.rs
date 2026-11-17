@@ -42,22 +42,39 @@ const COMMANDS: &[&str] = &[
     "ai_preview_context",
     "ai_chat",
     // Unified Master AI Engine
+    #[cfg(feature = "mod-ai-advanced")]
     "ai_get_providers",
+    #[cfg(feature = "mod-ai-advanced")]
     "ai_save_provider",
+    #[cfg(feature = "mod-ai-advanced")]
     "ai_delete_provider",
+    #[cfg(feature = "mod-ai-advanced")]
     "ai_get_routing_matrix",
+    #[cfg(feature = "mod-ai-advanced")]
     "ai_save_routing_rule",
+    #[cfg(feature = "mod-ai-advanced")]
     "ai_get_personas",
+    #[cfg(feature = "mod-ai-advanced")]
     "ai_save_persona",
+    #[cfg(feature = "mod-ai-advanced")]
     "ai_delete_persona",
+    #[cfg(feature = "mod-ai-advanced")]
     "ai_get_habits",
+    #[cfg(feature = "mod-ai-advanced")]
     "ai_search_habits",
+    #[cfg(feature = "mod-ai-advanced")]
     "ai_toggle_habit_pin",
+    #[cfg(feature = "mod-ai-advanced")]
     "ai_delete_habit",
+    #[cfg(feature = "mod-ai-advanced")]
     "ai_get_skills",
+    #[cfg(feature = "mod-ai-advanced")]
     "ai_save_skill",
+    #[cfg(feature = "mod-ai-advanced")]
     "ai_delete_skill",
+    #[cfg(feature = "mod-ai-advanced")]
     "ai_dispatch_task",
+    #[cfg(feature = "mod-ai-advanced")]
     "ai_dispatch_task_with_skill",
     // Feedback & Crash Reporting
     "submit_feedback",

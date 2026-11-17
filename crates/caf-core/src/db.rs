@@ -32,13 +32,16 @@ pub fn open_encrypted(data_dir: &Path, passphrase: &str) -> Result<Connection, C
 
     crate::migrations::run_migrations(&mut conn)?;
 
-    // Seed default builtin skills if empty
-    let skills_count: i64 = conn
-        .query_row("SELECT count(*) FROM ai_custom_skills", [], |r| r.get(0))
-        .unwrap_or(0);
-    if skills_count == 0 {
-        for s in crate::ai::skills::builtin_skills() {
-            let _ = crate::ai::db::save_skill(&conn, &s);
+    #[cfg(feature = "mod-ai-advanced")]
+    {
+        // Seed default builtin skills if empty
+        let skills_count: i64 = conn
+            .query_row("SELECT count(*) FROM ai_custom_skills", [], |r| r.get(0))
+            .unwrap_or(0);
+        if skills_count == 0 {
+            for s in crate::ai::skills::builtin_skills() {
+                let _ = crate::ai::db::save_skill(&conn, &s);
+            }
         }
     }
 

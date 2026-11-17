@@ -2,30 +2,48 @@
 //! Combines custom personas, zero-knowledge SQLite/FTS5 habit memory, multi-provider model routing,
 //! privacy scrubbing, custom skills catalog, and automated execution plans.
 
-pub mod context_builder;
-pub mod db;
-pub mod dispatcher;
-pub mod habit_learner;
 pub mod legacy;
-pub mod models;
+pub mod provider_registry;
 pub mod scrubber;
+
+pub use legacy::*;
+pub use provider_registry::*;
+pub use scrubber::*;
+
+#[cfg(feature = "mod-ai-advanced")]
+pub mod context_builder;
+#[cfg(feature = "mod-ai-advanced")]
+pub mod db;
+#[cfg(feature = "mod-ai-advanced")]
+pub mod dispatcher;
+#[cfg(feature = "mod-ai-advanced")]
+pub mod habit_learner;
+#[cfg(feature = "mod-ai-advanced")]
+pub mod models;
+#[cfg(feature = "mod-ai-advanced")]
 pub mod skills;
 
+#[cfg(feature = "mod-ai-advanced")]
 pub use context_builder::*;
+#[cfg(feature = "mod-ai-advanced")]
 pub use db::*;
+#[cfg(feature = "mod-ai-advanced")]
 pub use dispatcher::*;
+#[cfg(feature = "mod-ai-advanced")]
 pub use habit_learner::*;
-pub use legacy::*;
+#[cfg(feature = "mod-ai-advanced")]
 pub use models::*;
-pub use scrubber::*;
+#[cfg(feature = "mod-ai-advanced")]
 pub use skills::*;
 
+#[cfg(feature = "mod-ai-advanced")]
 use crate::error::CafError;
 
 // ---------------------------------------------------------------------------
-// High-Level Public API for Tauri IPC Commands
+// High-Level Public API for Tauri IPC Commands (Advanced AI Engine)
 // ---------------------------------------------------------------------------
 
+#[cfg(feature = "mod-ai-advanced")]
 pub fn get_all_providers() -> Result<Vec<AiProviderSummary>, CafError> {
     let conn = crate::db::open()?;
     let configs = db::get_providers(&conn)?;
@@ -49,76 +67,91 @@ pub fn get_all_providers() -> Result<Vec<AiProviderSummary>, CafError> {
         .collect())
 }
 
+#[cfg(feature = "mod-ai-advanced")]
 pub fn save_ai_provider(provider: AiProviderConfig) -> Result<(), CafError> {
     let conn = crate::db::open()?;
     db::save_provider(&conn, &provider)
 }
 
+#[cfg(feature = "mod-ai-advanced")]
 pub fn delete_ai_provider(id: &str) -> Result<(), CafError> {
     let conn = crate::db::open()?;
     db::delete_provider(&conn, id)
 }
 
+#[cfg(feature = "mod-ai-advanced")]
 pub fn get_task_routing_matrix() -> Result<Vec<TaskRouteRule>, CafError> {
     let conn = crate::db::open()?;
     db::get_routing_matrix(&conn)
 }
 
+#[cfg(feature = "mod-ai-advanced")]
 pub fn save_task_routing_rule(rule: TaskRouteRule) -> Result<(), CafError> {
     let conn = crate::db::open()?;
     db::save_routing_rule(&conn, &rule)
 }
 
+#[cfg(feature = "mod-ai-advanced")]
 pub fn get_user_personas() -> Result<Vec<SystemPersona>, CafError> {
     let conn = crate::db::open()?;
     db::get_personas(&conn)
 }
 
+#[cfg(feature = "mod-ai-advanced")]
 pub fn save_user_persona(persona: SystemPersona) -> Result<(), CafError> {
     let conn = crate::db::open()?;
     db::save_persona(&conn, &persona)
 }
 
+#[cfg(feature = "mod-ai-advanced")]
 pub fn delete_user_persona(id: &str) -> Result<(), CafError> {
     let conn = crate::db::open()?;
     db::delete_persona(&conn, id)
 }
 
+#[cfg(feature = "mod-ai-advanced")]
 pub fn get_habit_memories() -> Result<Vec<HabitFact>, CafError> {
     let conn = crate::db::open()?;
     db::get_habits(&conn)
 }
 
+#[cfg(feature = "mod-ai-advanced")]
 pub fn search_habit_memories(query: &str, limit: usize) -> Result<Vec<HabitFact>, CafError> {
     let conn = crate::db::open()?;
     db::search_relevant_habits(&conn, query, limit)
 }
 
+#[cfg(feature = "mod-ai-advanced")]
 pub fn toggle_habit_pin_status(id: &str) -> Result<bool, CafError> {
     let conn = crate::db::open()?;
     db::toggle_habit_pin(&conn, id)
 }
 
+#[cfg(feature = "mod-ai-advanced")]
 pub fn delete_habit_memory(id: &str) -> Result<(), CafError> {
     let conn = crate::db::open()?;
     db::delete_habit(&conn, id)
 }
 
+#[cfg(feature = "mod-ai-advanced")]
 pub fn get_all_skills() -> Result<Vec<CustomSkill>, CafError> {
     let conn = crate::db::open()?;
     db::get_skills(&conn)
 }
 
+#[cfg(feature = "mod-ai-advanced")]
 pub fn save_custom_skill(skill: CustomSkill) -> Result<(), CafError> {
     let conn = crate::db::open()?;
     db::save_skill(&conn, &skill)
 }
 
+#[cfg(feature = "mod-ai-advanced")]
 pub fn delete_custom_skill(id: &str) -> Result<(), CafError> {
     let conn = crate::db::open()?;
     db::delete_skill(&conn, id)
 }
 
+#[cfg(feature = "mod-ai-advanced")]
 pub fn dispatch_task(
     task_type: TaskType,
     user_query: &str,
@@ -129,6 +162,7 @@ pub fn dispatch_task(
     dispatcher.dispatch(task_type, user_query, terminal_ctx.as_ref())
 }
 
+#[cfg(feature = "mod-ai-advanced")]
 pub fn dispatch_task_with_skill(
     task_type: TaskType,
     user_query: &str,

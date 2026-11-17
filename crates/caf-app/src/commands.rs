@@ -252,26 +252,31 @@ pub async fn ai_chat(
     .await
 }
 
+#[cfg(feature = "mod-ai-advanced")]
 #[tauri::command]
 pub async fn ai_get_providers() -> Result<Vec<ai::AiProviderSummary>, CafError> {
     run_guarded("ai_get_providers", ai::get_all_providers).await
 }
 
+#[cfg(feature = "mod-ai-advanced")]
 #[tauri::command]
 pub async fn ai_save_provider(provider: ai::AiProviderConfig) -> Result<(), CafError> {
     run_guarded("ai_save_provider", move || ai::save_ai_provider(provider)).await
 }
 
+#[cfg(feature = "mod-ai-advanced")]
 #[tauri::command]
 pub async fn ai_delete_provider(id: String) -> Result<(), CafError> {
     run_guarded("ai_delete_provider", move || ai::delete_ai_provider(&id)).await
 }
 
+#[cfg(feature = "mod-ai-advanced")]
 #[tauri::command]
 pub async fn ai_get_routing_matrix() -> Result<Vec<ai::TaskRouteRule>, CafError> {
     run_guarded("ai_get_routing_matrix", ai::get_task_routing_matrix).await
 }
 
+#[cfg(feature = "mod-ai-advanced")]
 #[tauri::command]
 pub async fn ai_save_routing_rule(rule: ai::TaskRouteRule) -> Result<(), CafError> {
     run_guarded("ai_save_routing_rule", move || {
@@ -280,26 +285,31 @@ pub async fn ai_save_routing_rule(rule: ai::TaskRouteRule) -> Result<(), CafErro
     .await
 }
 
+#[cfg(feature = "mod-ai-advanced")]
 #[tauri::command]
 pub async fn ai_get_personas() -> Result<Vec<ai::SystemPersona>, CafError> {
     run_guarded("ai_get_personas", ai::get_user_personas).await
 }
 
+#[cfg(feature = "mod-ai-advanced")]
 #[tauri::command]
 pub async fn ai_save_persona(persona: ai::SystemPersona) -> Result<(), CafError> {
     run_guarded("ai_save_persona", move || ai::save_user_persona(persona)).await
 }
 
+#[cfg(feature = "mod-ai-advanced")]
 #[tauri::command]
 pub async fn ai_delete_persona(id: String) -> Result<(), CafError> {
     run_guarded("ai_delete_persona", move || ai::delete_user_persona(&id)).await
 }
 
+#[cfg(feature = "mod-ai-advanced")]
 #[tauri::command]
 pub async fn ai_get_habits() -> Result<Vec<ai::HabitFact>, CafError> {
     run_guarded("ai_get_habits", ai::get_habit_memories).await
 }
 
+#[cfg(feature = "mod-ai-advanced")]
 #[tauri::command]
 pub async fn ai_search_habits(
     query: String,
@@ -311,6 +321,7 @@ pub async fn ai_search_habits(
     .await
 }
 
+#[cfg(feature = "mod-ai-advanced")]
 #[tauri::command]
 pub async fn ai_toggle_habit_pin(id: String) -> Result<bool, CafError> {
     run_guarded("ai_toggle_habit_pin", move || {
@@ -319,26 +330,31 @@ pub async fn ai_toggle_habit_pin(id: String) -> Result<bool, CafError> {
     .await
 }
 
+#[cfg(feature = "mod-ai-advanced")]
 #[tauri::command]
 pub async fn ai_delete_habit(id: String) -> Result<(), CafError> {
     run_guarded("ai_delete_habit", move || ai::delete_habit_memory(&id)).await
 }
 
+#[cfg(feature = "mod-ai-advanced")]
 #[tauri::command]
 pub async fn ai_get_skills() -> Result<Vec<ai::CustomSkill>, CafError> {
     run_guarded("ai_get_skills", ai::get_all_skills).await
 }
 
+#[cfg(feature = "mod-ai-advanced")]
 #[tauri::command]
 pub async fn ai_save_skill(skill: ai::CustomSkill) -> Result<(), CafError> {
     run_guarded("ai_save_skill", move || ai::save_custom_skill(skill)).await
 }
 
+#[cfg(feature = "mod-ai-advanced")]
 #[tauri::command]
 pub async fn ai_delete_skill(id: String) -> Result<(), CafError> {
     run_guarded("ai_delete_skill", move || ai::delete_custom_skill(&id)).await
 }
 
+#[cfg(feature = "mod-ai-advanced")]
 #[tauri::command]
 pub async fn ai_dispatch_task(
     task_type: String,
@@ -352,6 +368,7 @@ pub async fn ai_dispatch_task(
     .await
 }
 
+#[cfg(feature = "mod-ai-advanced")]
 #[tauri::command]
 pub async fn ai_dispatch_task_with_skill(
     task_type: String,

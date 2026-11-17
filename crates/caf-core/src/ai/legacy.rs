@@ -329,20 +329,20 @@ pub fn build_context(
 ) -> Result<ContextPayload, CafError> {
     match level {
         PrivacyLevel::Summary => {
-            // Aggregate only: profile count, enabled modules, note count
-            let conn = crate::db::open()?;
-            let note_count: i64 = conn
-                .query_row("SELECT COUNT(*) FROM notes", [], |r| r.get(0))
-                .unwrap_or(0);
-            let profile_count: i64 = conn
-                .query_row("SELECT COUNT(*) FROM profiles", [], |r| r.get(0))
-                .unwrap_or(1);
-
-            let content = format!(
-                "Application Summary:\n- Active Profiles: {}\n- Total Notes: {}\n- Modules: Notes, AI",
-                profile_count, note_count
+            let providers = super::provider_registry::get_registered_providers();
+            let mut summary_parts = Vec::new();
+            for p in &providers {
+                if let Ok(part) = p.provide_summary(session)
+                    && !part.trim().is_empty()
+                {
+                    summary_parts.push(part);
+                }
+            }
+            let raw_content = format!(
+                "Application Summary:\n- Modules: Notes, AI\n{}",
+                summary_parts.join("\n")
             );
-            let (scrubbed, count) = scrub_text(&content);
+            let (scrubbed, count) = scrub_text(&raw_content);
             Ok(ContextPayload {
                 level: PrivacyLevel::Summary,
                 content: scrubbed,
@@ -354,31 +354,17 @@ pub fn build_context(
                 return Err(CafError::Ai(AiError::ConsentRequired));
             }
 
-            let is_super = session.role == "super_admin";
-            let scope = crate::visibility::scope(&session.profile_id, is_super);
-            let conn = crate::db::open()?;
-            let query = format!(
-                "SELECT title, content FROM notes WHERE {} ORDER BY updated_at DESC LIMIT 10",
-                scope.sql_clause
-            );
-            let mut stmt = conn
-                .prepare(&query)
-                .map_err(|e| CafError::Db(DbError::Generic(e.to_string())))?;
-            let rows = stmt
-                .query_map([], |r| {
-                    let title: String = r.get(0)?;
-                    let content: String = r.get(1)?;
-                    Ok(format!("Note: {}\n{}", title, content))
-                })
-                .map_err(|e| CafError::Db(DbError::Generic(e.to_string())))?;
-
-            let mut notes_text = String::new();
-            for entry in rows.flatten() {
-                notes_text.push_str(&entry);
-                notes_text.push_str("\n\n");
+            let providers = super::provider_registry::get_registered_providers();
+            let mut detailed_parts = Vec::new();
+            for p in &providers {
+                if let Ok(part) = p.provide_detailed(session)
+                    && !part.trim().is_empty()
+                {
+                    detailed_parts.push(part);
+                }
             }
 
-            let (scrubbed, count) = scrub_text(&notes_text);
+            let (scrubbed, count) = scrub_text(&detailed_parts.join("\n\n"));
             Ok(ContextPayload {
                 level: PrivacyLevel::Detailed,
                 content: scrubbed,
@@ -392,32 +378,18 @@ pub fn build_context(
                 )));
             }
 
-            let is_super = session.role == "super_admin";
-            let scope = crate::visibility::scope(&session.profile_id, is_super);
-            let conn = crate::db::open()?;
-            let query = format!(
-                "SELECT title, content FROM notes WHERE {} ORDER BY updated_at DESC LIMIT 20",
-                scope.sql_clause
-            );
-            let mut stmt = conn
-                .prepare(&query)
-                .map_err(|e| CafError::Db(DbError::Generic(e.to_string())))?;
-            let rows = stmt
-                .query_map([], |r| {
-                    let title: String = r.get(0)?;
-                    let content: String = r.get(1)?;
-                    Ok(format!("Note: {}\n{}", title, content))
-                })
-                .map_err(|e| CafError::Db(DbError::Generic(e.to_string())))?;
-
-            let mut notes_text = String::new();
-            for entry in rows.flatten() {
-                notes_text.push_str(&entry);
-                notes_text.push_str("\n\n");
+            let providers = super::provider_registry::get_registered_providers();
+            let mut full_parts = Vec::new();
+            for p in &providers {
+                if let Ok(part) = p.provide_full(session)
+                    && !part.trim().is_empty()
+                {
+                    full_parts.push(part);
+                }
             }
 
             // In Full mode, still run basic scrubber for high sensitivity tokens
-            let (scrubbed, count) = scrub_text(&notes_text);
+            let (scrubbed, count) = scrub_text(&full_parts.join("\n\n"));
             Ok(ContextPayload {
                 level: PrivacyLevel::Full,
                 content: scrubbed,

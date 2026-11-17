@@ -11,6 +11,10 @@ description = "CAFramework v2 core library — pure Rust, no GUI dependencies."
 name = "caf_core"
 path = "src/lib.rs"
 
+[features]
+default = ["mod-ai-advanced"]
+mod-ai-advanced = []
+
 [dependencies]
 thiserror.workspace = true
 serde.workspace = true

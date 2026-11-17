@@ -143,22 +143,39 @@ pub fn run_with_start(start: std::time::Instant) {
             commands::clear_ai_api_key,
             commands::ai_preview_context,
             commands::ai_chat,
+            #[cfg(feature = "mod-ai-advanced")]
             commands::ai_get_providers,
+            #[cfg(feature = "mod-ai-advanced")]
             commands::ai_save_provider,
+            #[cfg(feature = "mod-ai-advanced")]
             commands::ai_delete_provider,
+            #[cfg(feature = "mod-ai-advanced")]
             commands::ai_get_routing_matrix,
+            #[cfg(feature = "mod-ai-advanced")]
             commands::ai_save_routing_rule,
+            #[cfg(feature = "mod-ai-advanced")]
             commands::ai_get_personas,
+            #[cfg(feature = "mod-ai-advanced")]
             commands::ai_save_persona,
+            #[cfg(feature = "mod-ai-advanced")]
             commands::ai_delete_persona,
+            #[cfg(feature = "mod-ai-advanced")]
             commands::ai_get_habits,
+            #[cfg(feature = "mod-ai-advanced")]
             commands::ai_search_habits,
+            #[cfg(feature = "mod-ai-advanced")]
             commands::ai_toggle_habit_pin,
+            #[cfg(feature = "mod-ai-advanced")]
             commands::ai_delete_habit,
+            #[cfg(feature = "mod-ai-advanced")]
             commands::ai_get_skills,
+            #[cfg(feature = "mod-ai-advanced")]
             commands::ai_save_skill,
+            #[cfg(feature = "mod-ai-advanced")]
             commands::ai_delete_skill,
+            #[cfg(feature = "mod-ai-advanced")]
             commands::ai_dispatch_task,
+            #[cfg(feature = "mod-ai-advanced")]
             commands::ai_dispatch_task_with_skill,
             commands::submit_feedback,
             commands::get_pending_crash_report,
