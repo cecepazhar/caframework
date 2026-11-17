@@ -269,3 +269,27 @@ export async function invoke_flushOutboxNow(): Promise<any> {
   return invoke('flush_outbox_now');
 }
 
+export async function invoke_listEntities(): Promise<any[]> {
+  return invoke('list_entities');
+}
+
+export async function invoke_getEntityTemplate(entityKey: string, format: string): Promise<number[]> {
+  return invoke('get_entity_template', { entity_key: entityKey, format: format });
+}
+
+export async function invoke_exportEntityData(entityKey: string, format: string): Promise<any> {
+  return invoke('export_entity_data', { entity_key: entityKey, format: format });
+}
+
+export async function invoke_parseImportFile(entityKey: string, format: string, data: number[]): Promise<any> {
+  return invoke('parse_import_file', { entity_key: entityKey, format: format, data: data });
+}
+
+export async function invoke_previewImportData(entityKey: string, format: string, data: number[], mapping: any, mode: any): Promise<any> {
+  return invoke('preview_import_data', { entity_key: entityKey, format: format, data: data, mapping: mapping, mode: mode });
+}
+
+export async function invoke_executeImport(entityKey: string, format: string, data: number[], mapping: any, mode: any, strategy: any): Promise<any> {
+  return invoke('execute_import', { entity_key: entityKey, format: format, data: data, mapping: mapping, mode: mode, strategy: strategy });
+}
+

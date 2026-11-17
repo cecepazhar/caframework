@@ -644,6 +644,7 @@ dependencies = [
  "ureq",
  "uuid",
  "zeroize",
+ "zip",
 ]
 
 [[package]]

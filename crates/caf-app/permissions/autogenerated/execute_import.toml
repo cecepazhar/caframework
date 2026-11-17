@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-execute-import"
+description = "Enables the execute_import command without any pre-configured scope."
+commands.allow = ["execute_import"]
+
+[[permission]]
+identifier = "deny-execute-import"
+description = "Denies the execute_import command without any pre-configured scope."
+commands.deny = ["execute_import"]

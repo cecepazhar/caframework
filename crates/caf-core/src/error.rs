@@ -116,6 +116,18 @@ domain_error!(
 );
 
 domain_error!(
+    DataIoError,
+    "DATA",
+    UnknownEntity = ("001", "unknown entity"),
+    UnsupportedFormat = ("002", "unsupported export or import format"),
+    FileTooLarge = ("003", "import file size exceeded limit"),
+    RowLimitExceeded = ("004", "import row count exceeded limit"),
+    ParseError = ("005", "failed to parse import file"),
+    ValidationError = ("006", "import row validation failed"),
+    NaturalKeyConflict = ("007", "natural key conflict during insert"),
+);
+
+domain_error!(
     AuthError,
     "AUTH",
     Unauthorized = ("001", "unauthorized profile access"),
@@ -141,6 +153,8 @@ pub enum CafError {
     Auth(#[from] AuthError),
     #[error("http: {0}")]
     Http(#[from] HttpError),
+    #[error("data: {0}")]
+    DataIo(#[from] DataIoError),
     #[error("not implemented: {0}")]
     NotImplemented(String),
 }
@@ -156,6 +170,7 @@ impl CafError {
             Self::Pro(e) => e.code(),
             Self::Auth(e) => e.code(),
             Self::Http(e) => e.code(),
+            Self::DataIo(e) => e.code(),
             Self::NotImplemented(_) => "CAF-CORE-501",
         }
     }
@@ -170,6 +185,7 @@ impl CafError {
             Self::Pro(_) => "PRO",
             Self::Auth(_) => "AUTH",
             Self::Http(_) => "HTTP",
+            Self::DataIo(_) => "DATA",
             Self::NotImplemented(_) => "CORE",
         }
     }
@@ -203,6 +219,9 @@ impl CafError {
         }
         for v in HttpError::all_variants() {
             list.push(Self::Http(v));
+        }
+        for v in DataIoError::all_variants() {
+            list.push(Self::DataIo(v));
         }
         list.push(Self::NotImplemented("example feature".into()));
         list

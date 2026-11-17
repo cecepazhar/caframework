@@ -369,6 +369,37 @@ pub const COMMAND_POLICIES: &[CommandPolicy] = &[
         policy: Policy::Requires("integrations:manage"),
         returns_list: false,
     },
+    // Data Import / Export (P10)
+    CommandPolicy {
+        name: "list_entities",
+        policy: Policy::Session,
+        returns_list: true,
+    },
+    CommandPolicy {
+        name: "get_entity_template",
+        policy: Policy::Session,
+        returns_list: false,
+    },
+    CommandPolicy {
+        name: "export_entity_data",
+        policy: Policy::Session,
+        returns_list: false,
+    },
+    CommandPolicy {
+        name: "parse_import_file",
+        policy: Policy::Session,
+        returns_list: false,
+    },
+    CommandPolicy {
+        name: "preview_import_data",
+        policy: Policy::Session,
+        returns_list: false,
+    },
+    CommandPolicy {
+        name: "execute_import",
+        policy: Policy::Session,
+        returns_list: false,
+    },
 ];
 
 pub fn get_command_policy(command_name: &str) -> Option<&'static CommandPolicy> {

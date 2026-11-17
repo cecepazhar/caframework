@@ -85,6 +85,13 @@ const COMMANDS: &[&str] = &[
     "get_integration_logs",
     "get_outbox_items",
     "flush_outbox_now",
+    // Data Import / Export (P10)
+    "list_entities",
+    "get_entity_template",
+    "export_entity_data",
+    "parse_import_file",
+    "preview_import_data",
+    "execute_import",
 ];
 
 fn main() {

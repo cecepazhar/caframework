@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-get-entity-template"
+description = "Enables the get_entity_template command without any pre-configured scope."
+commands.allow = ["get_entity_template"]
+
+[[permission]]
+identifier = "deny-get-entity-template"
+description = "Denies the get_entity_template command without any pre-configured scope."
+commands.deny = ["get_entity_template"]

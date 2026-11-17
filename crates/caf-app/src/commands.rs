@@ -555,3 +555,69 @@ pub async fn flush_outbox_now() -> Result<caf_core::integrations::outbox::FlushS
     guarded("flush_outbox_now", || Ok(()))?;
     caf_core::integrations::flush_outbox().await
 }
+
+// Data Import / Export commands (P10)
+#[tauri::command]
+pub async fn list_entities() -> Result<Vec<caf_core::data_io::EntityDefinition>, CafError> {
+    run_guarded("list_entities", || Ok(caf_core::data_io::list_entities())).await
+}
+
+#[tauri::command]
+pub async fn get_entity_template(entity_key: String, format: String) -> Result<Vec<u8>, CafError> {
+    run_guarded("get_entity_template", move || {
+        caf_core::data_io::generate_entity_template(&entity_key, &format)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn export_entity_data(
+    entity_key: String,
+    format: String,
+) -> Result<caf_core::data_io::ExportResult, CafError> {
+    run_guarded("export_entity_data", move || {
+        caf_core::data_io::export_entity(&entity_key, &format)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn parse_import_file(
+    entity_key: String,
+    format: String,
+    data: Vec<u8>,
+) -> Result<caf_core::data_io::ImportFileInfo, CafError> {
+    run_guarded("parse_import_file", move || {
+        caf_core::data_io::parse_import_file(&entity_key, &format, &data)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn preview_import_data(
+    entity_key: String,
+    format: String,
+    data: Vec<u8>,
+    mapping: std::collections::HashMap<String, String>,
+    mode: caf_core::data_io::ImportMode,
+) -> Result<caf_core::data_io::ImportPreview, CafError> {
+    run_guarded("preview_import_data", move || {
+        caf_core::data_io::preview_import(&entity_key, &format, &data, &mapping, mode)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn execute_import(
+    entity_key: String,
+    format: String,
+    data: Vec<u8>,
+    mapping: std::collections::HashMap<String, String>,
+    mode: caf_core::data_io::ImportMode,
+    strategy: caf_core::data_io::ImportStrategy,
+) -> Result<caf_core::data_io::ImportExecutionReport, CafError> {
+    run_guarded("execute_import", move || {
+        caf_core::data_io::execute_import(&entity_key, &format, &data, &mapping, mode, strategy)
+    })
+    .await
+}

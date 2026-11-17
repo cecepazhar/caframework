@@ -17,6 +17,14 @@
 | `CAF-AUTH-002` | `AUTH` | auth: invalid profile PIN |
 | `CAF-AUTH-003` | `AUTH` | auth: insufficient role permissions |
 | `CAF-CORE-501` | `CORE` | not implemented: example feature |
+| `CAF-DATA-000` | `DATA` | data: sample error |
+| `CAF-DATA-001` | `DATA` | data: unknown entity |
+| `CAF-DATA-002` | `DATA` | data: unsupported export or import format |
+| `CAF-DATA-003` | `DATA` | data: import file size exceeded limit |
+| `CAF-DATA-004` | `DATA` | data: import row count exceeded limit |
+| `CAF-DATA-005` | `DATA` | data: failed to parse import file |
+| `CAF-DATA-006` | `DATA` | data: import row validation failed |
+| `CAF-DATA-007` | `DATA` | data: natural key conflict during insert |
 | `CAF-DB-000` | `DB` | database: sample error |
 | `CAF-DB-001` | `DB` | database: database connection failed |
 | `CAF-DB-002` | `DB` | database: database query execution failed |

@@ -208,7 +208,7 @@
     t('settings.subscription.featureCommunity')
   ]);
 
-  const TABS = ['profile', 'updates', 'ai', 'subscription', 'security', 'backup', 'schedules', 'integrations', 'performance', 'shortcuts'] as const;
+  const TABS = ['profile', 'updates', 'ai', 'subscription', 'security', 'backup', 'schedules', 'integrations', 'dataIo', 'performance', 'shortcuts'] as const;
   type SettingsTab = (typeof TABS)[number];
   // `?tab=` lets the profile menu deep-link straight to a tab.
   const requestedTab = page.url.searchParams.get('tab') ?? '';
@@ -573,6 +573,175 @@
     } finally {
       isChangingPassword = false;
     }
+  }
+
+  // ---- Data Import / Export (P10) -------------------------------------------
+  import {
+    listEntities,
+    getEntityTemplate,
+    exportEntityData,
+    parseImportFile,
+    previewImportData,
+    executeImport,
+    type EntityDefinition,
+    type ExportResult,
+    type ImportFileInfo,
+    type ImportPreview,
+    type ImportExecutionReport,
+    type ImportMode,
+    type ImportStrategy
+  } from '$lib/api/dataIo';
+
+  let entitiesList = $state<EntityDefinition[]>([]);
+  let selectedEntityKey = $state('notes');
+  let exportFormat = $state('csv');
+  let exportingEntity = $state(false);
+  let lastExportResult = $state<ExportResult | null>(null);
+
+  let importFormat = $state('csv');
+  let importMode = $state<ImportMode>('insert_only');
+  let importStrategy = $state<ImportStrategy>('skip_invalid');
+  let importDataBytes = $state<Uint8Array | null>(null);
+  let importFileInfo = $state<ImportFileInfo | null>(null);
+  let importMapping = $state<Record<string, string>>({});
+  let importPreview = $state<ImportPreview | null>(null);
+  let importExecutionReport = $state<ImportExecutionReport | null>(null);
+  let parsingFile = $state(false);
+  let previewingImport = $state(false);
+  let executingImport = $state(false);
+
+  async function loadDataIo() {
+    try {
+      entitiesList = await listEntities();
+      if (entitiesList.length > 0 && !entitiesList.some((e) => e.key === selectedEntityKey)) {
+        selectedEntityKey = entitiesList[0].key;
+      }
+    } catch {
+      // silent
+    }
+  }
+
+  $effect(() => {
+    if (activeTab === 'dataIo') {
+      void loadDataIo();
+    }
+  });
+
+  async function handleExportEntityData() {
+    exportingEntity = true;
+    try {
+      lastExportResult = await exportEntityData(selectedEntityKey, exportFormat);
+      showToast(
+        t('settings.dataIo.exportSuccess', {
+          count: lastExportResult.row_count,
+          path: lastExportResult.file_path
+        }),
+        'success'
+      );
+    } catch (err: any) {
+      showToast(errorText(err), 'error');
+    } finally {
+      exportingEntity = false;
+    }
+  }
+
+  async function handleDownloadTemplate(format: string) {
+    try {
+      const bytes = await getEntityTemplate(selectedEntityKey, format);
+      const mime =
+        format === 'json'
+          ? 'application/json'
+          : format === 'csv'
+            ? 'text/csv'
+            : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+      const blob = new Blob([bytes], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${selectedEntityKey}_template.${format}`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      showToast(errorText(err), 'error');
+    }
+  }
+
+  async function handleFileSelect(e: Event) {
+    const target = e.target as HTMLInputElement;
+    if (!target.files || target.files.length === 0) return;
+    const file = target.files[0];
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? 'csv';
+    importFormat = ext === 'xlsx' ? 'xlsx' : ext === 'json' ? 'json' : 'csv';
+
+    parsingFile = true;
+    try {
+      const buffer = await file.arrayBuffer();
+      importDataBytes = new Uint8Array(buffer);
+      importFileInfo = await parseImportFile(selectedEntityKey, importFormat, importDataBytes);
+      importMapping = { ...importFileInfo.suggested_mapping };
+      importPreview = null;
+      importExecutionReport = null;
+    } catch (err: any) {
+      showToast(errorText(err), 'error');
+    } finally {
+      parsingFile = false;
+    }
+  }
+
+  async function handleDryRun() {
+    if (!importDataBytes) return;
+    previewingImport = true;
+    try {
+      importPreview = await previewImportData(
+        selectedEntityKey,
+        importFormat,
+        importDataBytes,
+        importMapping,
+        importMode
+      );
+    } catch (err: any) {
+      showToast(errorText(err), 'error');
+    } finally {
+      previewingImport = false;
+    }
+  }
+
+  async function handleExecuteImport() {
+    if (!importDataBytes) return;
+    executingImport = true;
+    try {
+      importExecutionReport = await executeImport(
+        selectedEntityKey,
+        importFormat,
+        importDataBytes,
+        importMapping,
+        importMode,
+        importStrategy
+      );
+      showToast(
+        t('settings.dataIo.importResultSuccess', {
+          inserted: importExecutionReport.inserted,
+          updated: importExecutionReport.updated,
+          skipped: importExecutionReport.skipped
+        }),
+        'success'
+      );
+    } catch (err: any) {
+      showToast(errorText(err), 'error');
+    } finally {
+      executingImport = false;
+    }
+  }
+
+  function handleDownloadFailedCsv() {
+    if (!importExecutionReport?.failed_rows_csv) return;
+    const blob = new Blob([importExecutionReport.failed_rows_csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${selectedEntityKey}_failed_rows.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 </script>
 
@@ -1514,6 +1683,260 @@
                 {/each}
               </tbody>
             </table>
+          </div>
+        {/if}
+      </div>
+    </div>
+  {:else if activeTab === 'dataIo'}
+    <div class="{CARD} space-y-8">
+      <div>
+        <h2 class="text-lg font-semibold text-neutral-900 dark:text-white">{t('settings.dataIo.title')}</h2>
+        <p class="text-xs {MUTED}">{t('settings.dataIo.subtitle')}</p>
+      </div>
+
+      <!-- Entity Selection -->
+      <div class="{SUBCARD} flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <label for="entity-select" class="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
+            {t('settings.dataIo.selectEntity')}
+          </label>
+          <select
+            id="entity-select"
+            bind:value={selectedEntityKey}
+            class="text-xs rounded border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-3 py-1.5 text-neutral-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-sky-500"
+          >
+            {#each entitiesList as ent}
+              <option value={ent.key}>{ent.label_en} ({ent.key})</option>
+            {/each}
+          </select>
+        </div>
+        <!-- Download Templates -->
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-xs {MUTED}">{t('settings.dataIo.templateSection')}:</span>
+          <button
+            type="button"
+            onclick={() => handleDownloadTemplate('csv')}
+            class="text-xs px-2.5 py-1 rounded border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition"
+          >
+            CSV
+          </button>
+          <button
+            type="button"
+            onclick={() => handleDownloadTemplate('xlsx')}
+            class="text-xs px-2.5 py-1 rounded border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition"
+          >
+            XLSX
+          </button>
+          <button
+            type="button"
+            onclick={() => handleDownloadTemplate('json')}
+            class="text-xs px-2.5 py-1 rounded border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition"
+          >
+            JSON
+          </button>
+        </div>
+      </div>
+
+      <!-- Export Section -->
+      <div class="{SUBCARD} space-y-4">
+        <h3 class="text-sm font-semibold text-neutral-900 dark:text-white">{t('settings.dataIo.exportSection')}</h3>
+        <div class="flex items-center gap-4 flex-wrap">
+          <label class="text-xs font-medium text-neutral-700 dark:text-neutral-300">
+            {t('settings.dataIo.exportFormat')}:
+            <select
+              bind:value={exportFormat}
+              class="ml-2 text-xs rounded border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-2 py-1 text-neutral-900 dark:text-white"
+            >
+              <option value="csv">CSV</option>
+              <option value="xlsx">XLSX</option>
+              <option value="json">JSON</option>
+            </select>
+          </label>
+          <button
+            type="button"
+            disabled={exportingEntity}
+            onclick={handleExportEntityData}
+            class="text-xs px-4 py-1.5 rounded bg-sky-600 hover:bg-sky-500 text-white font-medium transition disabled:opacity-50"
+          >
+            {exportingEntity ? 'Exporting...' : t('settings.dataIo.exportButton')}
+          </button>
+        </div>
+        {#if lastExportResult}
+          <div class="p-3 rounded bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-300 font-mono">
+            {t('settings.dataIo.exportSuccess', {
+              count: lastExportResult.row_count,
+              path: lastExportResult.file_path
+            })}
+          </div>
+        {/if}
+      </div>
+
+      <!-- Import Section -->
+      <div class="{SUBCARD} space-y-5">
+        <h3 class="text-sm font-semibold text-neutral-900 dark:text-white">{t('settings.dataIo.importSection')}</h3>
+
+        <div>
+          <label for="import-file" class="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+            {t('settings.dataIo.chooseFile')}
+          </label>
+          <input
+            id="import-file"
+            type="file"
+            accept=".csv,.xlsx,.json"
+            onchange={handleFileSelect}
+            class="text-xs text-neutral-600 dark:text-neutral-400 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-neutral-200 dark:file:bg-neutral-800 file:text-neutral-900 dark:file:text-white hover:file:cursor-pointer"
+          />
+        </div>
+
+        {#if importFileInfo}
+          <!-- Column Mapping -->
+          <div class="space-y-2">
+            <h4 class="text-xs font-semibold text-neutral-900 dark:text-white">{t('settings.dataIo.autoMappingTitle')}</h4>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {#each importFileInfo.columns as col}
+                <div class="flex items-center justify-between gap-2 p-2 rounded bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800">
+                  <span class="text-xs font-mono text-neutral-700 dark:text-neutral-300 truncate">{col}</span>
+                  <span class="text-xs text-neutral-400">→</span>
+                  <select
+                    bind:value={importMapping[col]}
+                    class="text-xs rounded border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-950 px-2 py-1 text-neutral-900 dark:text-white"
+                  >
+                    <option value="">(ignore)</option>
+                    {#each entitiesList.find(e => e.key === selectedEntityKey)?.fields ?? [] as f}
+                      <option value={f.name}>{f.name} ({f.field_type})</option>
+                    {/each}
+                  </select>
+                </div>
+              {/each}
+            </div>
+          </div>
+
+          <!-- Options: Mode & Strategy -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+            <div>
+              <span class="block text-xs font-semibold text-neutral-900 dark:text-white mb-1.5">
+                {t('settings.dataIo.importMode')}
+              </span>
+              <div class="space-y-1 text-xs">
+                <label class="flex items-center gap-2">
+                  <input type="radio" bind:group={importMode} value="insert_only" />
+                  <span>{t('settings.dataIo.modeInsertOnly')}</span>
+                </label>
+                <label class="flex items-center gap-2">
+                  <input type="radio" bind:group={importMode} value="upsert_by_id" />
+                  <span>{t('settings.dataIo.modeUpsertById')}</span>
+                </label>
+                <label class="flex items-center gap-2">
+                  <input type="radio" bind:group={importMode} value="upsert_by_natural_key" />
+                  <span>{t('settings.dataIo.modeUpsertByNaturalKey')}</span>
+                </label>
+              </div>
+            </div>
+
+            <div>
+              <span class="block text-xs font-semibold text-neutral-900 dark:text-white mb-1.5">
+                {t('settings.dataIo.importStrategy')}
+              </span>
+              <div class="space-y-1 text-xs">
+                <label class="flex items-center gap-2">
+                  <input type="radio" bind:group={importStrategy} value="skip_invalid" />
+                  <span>{t('settings.dataIo.strategySkipInvalid')}</span>
+                </label>
+                <label class="flex items-center gap-2">
+                  <input type="radio" bind:group={importStrategy} value="all_or_nothing" />
+                  <span>{t('settings.dataIo.strategyAllOrNothing')}</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="flex items-center gap-3 pt-2">
+            <button
+              type="button"
+              disabled={previewingImport}
+              onclick={handleDryRun}
+              class="text-xs px-3.5 py-1.5 rounded border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-900 dark:text-white font-medium transition disabled:opacity-50"
+            >
+              {previewingImport ? 'Previewing...' : t('settings.dataIo.dryRunButton')}
+            </button>
+            <button
+              type="button"
+              disabled={executingImport}
+              onclick={handleExecuteImport}
+              class="text-xs px-4 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-medium transition disabled:opacity-50"
+            >
+              {executingImport ? 'Executing...' : t('settings.dataIo.executeButton')}
+            </button>
+          </div>
+        {/if}
+
+        <!-- Dry Run Preview -->
+        {#if importPreview}
+          <div class="space-y-3 pt-3 border-t border-neutral-200 dark:border-neutral-800">
+            <div class="flex items-center justify-between">
+              <h4 class="text-xs font-semibold text-neutral-900 dark:text-white">{t('settings.dataIo.previewTitle')}</h4>
+              <div class="flex items-center gap-3 text-xs">
+                <span class="text-emerald-600 dark:text-emerald-400 font-medium">{t('settings.dataIo.validInsert')}: {importPreview.to_insert}</span>
+                <span class="text-sky-600 dark:text-sky-400 font-medium">{t('settings.dataIo.validUpdate')}: {importPreview.to_update}</span>
+                <span class="text-rose-600 dark:text-rose-400 font-medium">{t('settings.dataIo.invalidCount')}: {importPreview.invalid_count}</span>
+              </div>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs border border-neutral-200 dark:border-neutral-800 rounded">
+                <thead class="bg-neutral-100 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400">
+                  <tr>
+                    <th class="p-2">#</th>
+                    <th class="p-2">Action</th>
+                    <th class="p-2">Details</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-neutral-200 dark:divide-neutral-800">
+                  {#each importPreview.preview_rows as row}
+                    <tr class="hover:bg-neutral-50 dark:hover:bg-neutral-950">
+                      <td class="p-2 font-mono">{row.row_number}</td>
+                      <td class="p-2">
+                        {#if row.action === 'insert'}
+                          <span class="px-1.5 py-0.5 rounded text-[10px] bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400">insert</span>
+                        {:else if row.action === 'update'}
+                          <span class="px-1.5 py-0.5 rounded text-[10px] bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-400">update</span>
+                        {:else}
+                          <span class="px-1.5 py-0.5 rounded text-[10px] bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-400">invalid</span>
+                        {/if}
+                      </td>
+                      <td class="p-2 font-mono text-[11px] {row.error ? 'text-rose-500' : 'text-neutral-600 dark:text-neutral-400'}">
+                        {row.error ?? JSON.stringify(row.values)}
+                      </td>
+                    </tr>
+                  {/each}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        {/if}
+
+        <!-- Execution Report -->
+        {#if importExecutionReport}
+          <div class="space-y-3 pt-3 border-t border-neutral-200 dark:border-neutral-800">
+            <div class="p-3 rounded bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 flex items-center justify-between flex-wrap gap-2">
+              <span class="text-xs font-medium text-neutral-900 dark:text-white">
+                {t('settings.dataIo.importResultSuccess', {
+                  inserted: importExecutionReport.inserted,
+                  updated: importExecutionReport.updated,
+                  skipped: importExecutionReport.skipped
+                })}
+              </span>
+              {#if importExecutionReport.failed_rows_csv}
+                <button
+                  type="button"
+                  onclick={handleDownloadFailedCsv}
+                  class="text-xs px-2.5 py-1 rounded bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 font-medium hover:bg-rose-200 dark:hover:bg-rose-900 transition"
+                >
+                  {t('settings.dataIo.downloadFailedCsv')} ({importExecutionReport.failed.length})
+                </button>
+              {/if}
+            </div>
           </div>
         {/if}
       </div>

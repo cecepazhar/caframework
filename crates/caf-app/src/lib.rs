@@ -181,6 +181,13 @@ pub fn run_with_start(start: std::time::Instant) {
             commands::get_integration_logs,
             commands::get_outbox_items,
             commands::flush_outbox_now,
+            // Data Import / Export (P10)
+            commands::list_entities,
+            commands::get_entity_template,
+            commands::export_entity_data,
+            commands::parse_import_file,
+            commands::preview_import_data,
+            commands::execute_import,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -74,6 +74,12 @@
     "allow-get-integration-logs",
     "allow-get-outbox-items",
     "allow-flush-outbox-now",
+    "allow-list-entities",
+    "allow-get-entity-template",
+    "allow-export-entity-data",
+    "allow-parse-import-file",
+    "allow-preview-import-data",
+    "allow-execute-import",
     "dialog:default",
     "process:default",
     "fs:default"
