@@ -32,6 +32,11 @@
 | `CAF-DB-004` | `DB` | database: record not found |
 | `CAF-DB-005` | `DB` | database: migration checksum does not match stored snapshot |
 | `CAF-DB-006` | `DB` | database: database schema version is newer than the application understands |
+| `CAF-FEATURE-000` | `FEATURE` | feature: sample error |
+| `CAF-FEATURE-001` | `FEATURE` | feature: feature is disabled |
+| `CAF-FEATURE-002` | `FEATURE` | feature: feature is locked and cannot be disabled |
+| `CAF-FEATURE-003` | `FEATURE` | feature: feature flag not found |
+| `CAF-FEATURE-004` | `FEATURE` | feature: cannot disable feature because predicate condition failed |
 | `CAF-HTTP-000` | `HTTP` | http: sample error |
 | `CAF-HTTP-001` | `HTTP` | http: invalid URL format |
 | `CAF-HTTP-002` | `HTTP` | http: insecure HTTP disallowed for non-loopback host |

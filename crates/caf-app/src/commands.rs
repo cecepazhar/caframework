@@ -756,3 +756,30 @@ pub async fn pro_logout() -> Result<(), CafError> {
 pub async fn pro_gated_action() -> Result<String, CafError> {
     run_guarded("pro_gated_action", caf_core::pro::pro_gated_action).await
 }
+
+// Runtime Feature Flags (A-03 / P14)
+#[tauri::command]
+pub async fn list_feature_flags() -> Result<Vec<caf_core::features::FeatureToggleItem>, CafError> {
+    run_guarded("list_feature_flags", caf_core::features::list_features).await
+}
+
+#[tauri::command]
+pub async fn get_feature_flag(
+    key: String,
+) -> Result<caf_core::features::FeatureToggleItem, CafError> {
+    run_guarded("get_feature_flag", move || {
+        caf_core::features::get_feature(&key)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn set_feature_flag(
+    key: String,
+    enabled: bool,
+) -> Result<caf_core::features::FeatureToggleItem, CafError> {
+    run_guarded("set_feature_flag", move || {
+        caf_core::features::set_feature_enabled(&key, enabled)
+    })
+    .await
+}

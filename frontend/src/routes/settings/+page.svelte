@@ -28,6 +28,11 @@
     type IntegrationRequestLogRecord,
     type OutboxItem
   } from '$lib/api/integrations';
+  import {
+    listFeatureFlags,
+    setFeatureFlag,
+    type FeatureToggleItem
+  } from '$lib/api/features';
   import AiSettingsForm from '$lib/components/AiSettingsForm.svelte';
   import ProfileAvatar from '$lib/components/ProfileAvatar.svelte';
   import AvatarPicker from '$lib/components/AvatarPicker.svelte';
@@ -208,11 +213,53 @@
     t('settings.subscription.featureCommunity')
   ]);
 
-  const TABS = ['profile', 'updates', 'ai', 'subscription', 'security', 'backup', 'schedules', 'integrations', 'dataIo', 'performance', 'shortcuts'] as const;
+  const TABS = ['profile', 'updates', 'features', 'ai', 'subscription', 'security', 'backup', 'schedules', 'integrations', 'dataIo', 'performance', 'shortcuts'] as const;
   type SettingsTab = (typeof TABS)[number];
   // `?tab=` lets the profile menu deep-link straight to a tab.
   const requestedTab = page.url.searchParams.get('tab') ?? '';
   let activeTab = $state<SettingsTab>((TABS as readonly string[]).includes(requestedTab) ? (requestedTab as SettingsTab) : 'profile');
+
+  // Features runtime toggles (A-03 / P14)
+  let featureFlags = $state<FeatureToggleItem[]>([]);
+  let featuresLoading = $state(false);
+  let togglingFeature = $state<string | null>(null);
+
+  async function loadFeatures() {
+    featuresLoading = true;
+    try {
+      featureFlags = await listFeatureFlags();
+    } catch (err) {
+      showToast(errorText(err), 'error');
+    } finally {
+      featuresLoading = false;
+    }
+  }
+
+  async function handleToggleFeature(item: FeatureToggleItem) {
+    if (item.locked) return;
+    togglingFeature = item.key;
+    const targetState = !item.enabled;
+    try {
+      const updated = await setFeatureFlag(item.key, targetState);
+      featureFlags = featureFlags.map((f) => (f.key === updated.key ? updated : f));
+      showToast(
+        targetState
+          ? t('settings.features.toastEnabled', { key: item.key })
+          : t('settings.features.toastDisabled', { key: item.key }),
+        'success'
+      );
+    } catch (err) {
+      showToast(errorText(err), 'error');
+    } finally {
+      togglingFeature = null;
+    }
+  }
+
+  $effect(() => {
+    if (activeTab === 'features') {
+      void loadFeatures();
+    }
+  });
 
   // Subscription only makes sense once the user has a CATerm account (Cloud): a purely local
   // vault has nothing to subscribe to. Hidden until sign-in, shown for both free-cloud and Pro.
@@ -864,6 +911,82 @@
       {:else if updater.status === 'error'}
         <div class="p-3 rounded-md bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-sm">
           {updater.error}
+        </div>
+      {/if}
+    </div>
+  {:else if activeTab === 'features'}
+    <div class="{CARD} space-y-6">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <h2 class="text-lg font-semibold text-neutral-900 dark:text-white">{t('settings.features.title')}</h2>
+          <p class="{MUTED} text-sm mt-1">{t('settings.features.subtitle')}</p>
+        </div>
+        <button
+          type="button"
+          onclick={() => void loadFeatures()}
+          disabled={featuresLoading}
+          class="px-3 py-1.5 text-xs font-medium rounded-lg border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors text-neutral-700 dark:text-neutral-300 cursor-pointer"
+        >
+          {t('common.refresh')}
+        </button>
+      </div>
+
+      {#if featuresLoading && featureFlags.length === 0}
+        <div class="py-12 text-center {MUTED} text-sm">
+          {t('common.loading')}
+        </div>
+      {:else if featureFlags.length === 0}
+        <div class="py-12 text-center {MUTED} text-sm">
+          {t('settings.features.empty')}
+        </div>
+      {:else}
+        <div class="space-y-3">
+          {#each featureFlags as item (item.key)}
+            <div class="{SUBCARD} flex items-start justify-between gap-4 transition-colors">
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <p class="text-sm font-semibold text-neutral-900 dark:text-white">
+                    {intlLocale() === 'id' ? item.labelId : item.labelEn}
+                  </p>
+                  <code class="text-xs px-1.5 py-0.5 rounded bg-neutral-200 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 font-mono">
+                    {item.key}
+                  </code>
+                  {#if item.locked}
+                    <span class="text-[10px] font-semibold tracking-wider px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 uppercase">
+                      {t('settings.features.lockedBadge')}
+                    </span>
+                  {/if}
+                  {#if !item.isCompiled}
+                    <span class="text-[10px] font-semibold tracking-wider px-2 py-0.5 rounded bg-neutral-500/10 text-neutral-500 border border-neutral-500/30 uppercase">
+                      {t('settings.features.uncompiledBadge')}
+                    </span>
+                  {/if}
+                </div>
+                <p class="{MUTED} text-xs mt-1.5 leading-relaxed">
+                  {intlLocale() === 'id' ? item.descriptionId : item.descriptionEn}
+                </p>
+                {#if item.lockedReason}
+                  <p class="text-xs text-amber-600 dark:text-amber-400 mt-1 flex items-center gap-1">
+                    <span class="font-medium">{t('settings.features.lockedReasonLabel')}:</span> {item.lockedReason}
+                  </p>
+                {/if}
+              </div>
+
+              <div class="flex items-center gap-3 shrink-0 pt-0.5">
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={item.enabled}
+                  aria-label={intlLocale() === 'id' ? item.labelId : item.labelEn}
+                  disabled={item.locked || !item.isCompiled || togglingFeature === item.key}
+                  onclick={() => void handleToggleFeature(item)}
+                  class="relative shrink-0 w-11 h-6 rounded-full transition-colors {item.enabled && item.isCompiled ? 'bg-sky-600' : 'bg-neutral-300 dark:bg-neutral-700'} {item.locked || !item.isCompiled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}"
+                >
+                  <span class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform {item.enabled && item.isCompiled ? 'translate-x-5' : ''}"></span>
+                </button>
+              </div>
+            </div>
+          {/each}
         </div>
       {/if}
     </div>

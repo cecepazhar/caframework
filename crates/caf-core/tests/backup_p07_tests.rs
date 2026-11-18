@@ -126,7 +126,13 @@ fn test_p07_2_complete_payload_and_dynamic_table_discovery() {
         .iter()
         .find(|t| t.name == "change_log")
         .unwrap();
-    assert_eq!(change_table.rows.len(), 1);
+    assert!(
+        change_table
+            .rows
+            .iter()
+            .any(|r| r.get(1) == Some(&serde_json::Value::String("notes".into()))),
+        "change_log must contain notes entries"
+    );
 }
 
 #[test]

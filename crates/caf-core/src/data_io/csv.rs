@@ -21,7 +21,7 @@ pub fn write_csv_row<W: Write>(
         let formatted = if neutralize {
             neutralize_cell(cell)
         } else {
-            (*cell).to_string()
+            std::borrow::Cow::Borrowed(*cell)
         };
 
         let needs_quotes = formatted.contains(',')
@@ -33,17 +33,23 @@ pub fn write_csv_row<W: Write>(
             writer
                 .write_all(b"\"")
                 .map_err(|e| CafError::generic(e.to_string()))?;
-            for ch in formatted.chars() {
-                if ch == '"' {
-                    writer
-                        .write_all(b"\"\"")
-                        .map_err(|e| CafError::generic(e.to_string()))?;
-                } else {
-                    let mut b = [0u8; 4];
-                    let encoded = ch.encode_utf8(&mut b);
-                    writer
-                        .write_all(encoded.as_bytes())
-                        .map_err(|e| CafError::generic(e.to_string()))?;
+            if !formatted.contains('"') {
+                writer
+                    .write_all(formatted.as_bytes())
+                    .map_err(|e| CafError::generic(e.to_string()))?;
+            } else {
+                for ch in formatted.chars() {
+                    if ch == '"' {
+                        writer
+                            .write_all(b"\"\"")
+                            .map_err(|e| CafError::generic(e.to_string()))?;
+                    } else {
+                        let mut b = [0u8; 4];
+                        let encoded = ch.encode_utf8(&mut b);
+                        writer
+                            .write_all(encoded.as_bytes())
+                            .map_err(|e| CafError::generic(e.to_string()))?;
+                    }
                 }
             }
             writer

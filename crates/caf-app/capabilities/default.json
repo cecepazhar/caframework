@@ -91,6 +91,9 @@
     "allow-pro-revoke-device",
     "allow-pro-logout",
     "allow-pro-gated-action",
+    "allow-list-feature-flags",
+    "allow-get-feature-flag",
+    "allow-set-feature-flag",
     "dialog:default",
     "process:default",
     "fs:default"

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-set-feature-flag"
+description = "Enables the set_feature_flag command without any pre-configured scope."
+commands.allow = ["set_feature_flag"]
+
+[[permission]]
+identifier = "deny-set-feature-flag"
+description = "Denies the set_feature_flag command without any pre-configured scope."
+commands.deny = ["set_feature_flag"]

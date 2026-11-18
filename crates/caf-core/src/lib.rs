@@ -39,6 +39,7 @@ pub mod data_io;
 pub mod db;
 pub mod dual_split;
 pub mod error;
+pub mod features;
 #[cfg(feature = "mod-feedback")]
 pub mod feedback;
 pub mod generated;

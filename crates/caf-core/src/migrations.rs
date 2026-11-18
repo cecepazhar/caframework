@@ -23,6 +23,11 @@ pub const FRAMEWORK_MIGRATIONS: &[(i32, &str, &str)] = &[
         "0003_rbac_and_audit",
         include_str!("migrations/0003_rbac_and_audit.sql"),
     ),
+    (
+        4,
+        "0004_feature_flags",
+        include_str!("migrations/0004_feature_flags.sql"),
+    ),
 ];
 
 fn compute_checksum(sql: &str) -> String {

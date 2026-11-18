@@ -135,6 +135,18 @@ domain_error!(
     PermissionDenied = ("003", "insufficient role permissions"),
 );
 
+domain_error!(
+    FeatureError,
+    "FEATURE",
+    FeatureDisabled = ("001", "feature is disabled"),
+    FeatureLocked = ("002", "feature is locked and cannot be disabled"),
+    FeatureNotFound = ("003", "feature flag not found"),
+    PredicateFailed = (
+        "004",
+        "cannot disable feature because predicate condition failed"
+    ),
+);
+
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
 pub enum CafError {
     #[error("vault: {0}")]
@@ -155,6 +167,8 @@ pub enum CafError {
     Http(#[from] HttpError),
     #[error("data: {0}")]
     DataIo(#[from] DataIoError),
+    #[error("feature: {0}")]
+    Feature(#[from] FeatureError),
     #[error("not implemented: {0}")]
     NotImplemented(String),
 }
@@ -171,6 +185,7 @@ impl CafError {
             Self::Auth(e) => e.code(),
             Self::Http(e) => e.code(),
             Self::DataIo(e) => e.code(),
+            Self::Feature(e) => e.code(),
             Self::NotImplemented(_) => "CAF-CORE-501",
         }
     }
@@ -186,6 +201,7 @@ impl CafError {
             Self::Auth(_) => "AUTH",
             Self::Http(_) => "HTTP",
             Self::DataIo(_) => "DATA",
+            Self::Feature(_) => "FEATURE",
             Self::NotImplemented(_) => "CORE",
         }
     }
@@ -222,6 +238,9 @@ impl CafError {
         }
         for v in DataIoError::all_variants() {
             list.push(Self::DataIo(v));
+        }
+        for v in FeatureError::all_variants() {
+            list.push(Self::Feature(v));
         }
         list.push(Self::NotImplemented("example feature".into()));
         list

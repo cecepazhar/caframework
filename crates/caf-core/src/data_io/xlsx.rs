@@ -126,7 +126,7 @@ pub fn generate_xlsx<W: Write + Seek>(
             let formatted = if neutralize {
                 neutralize_cell(cell)
             } else {
-                cell.clone()
+                std::borrow::Cow::Borrowed(cell.as_str())
             };
             let escaped = xml_escape(&formatted);
             let cell_xml =

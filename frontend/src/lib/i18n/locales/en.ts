@@ -886,6 +886,7 @@ const en = {
     tabs: {
       profile: 'Profile',
       updates: 'Updates',
+      features: 'Features',
       ai: 'AI Assistant',
       subscription: 'Subscription',
       security: 'Vault Security',
@@ -895,6 +896,16 @@ const en = {
       dataIo: 'Data Import / Export',
       shortcuts: 'Shortcuts',
       performance: 'Performance'
+    },
+    features: {
+      title: 'Runtime Feature Toggles',
+      subtitle: 'Enable or disable compiled capabilities without restarting. Changes are audit-logged.',
+      empty: 'No feature toggles available.',
+      lockedBadge: 'Locked',
+      uncompiledBadge: 'Not Compiled',
+      lockedReasonLabel: 'Lock reason',
+      toastEnabled: 'Feature "{{key}}" has been enabled.',
+      toastDisabled: 'Feature "{{key}}" has been disabled.'
     },
     profile: {
       localNote: 'Local profile — stored on this device only, no account or email needed.',

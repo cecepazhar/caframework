@@ -385,6 +385,25 @@ pub const COMMAND_POLICIES: &[CommandPolicy] = &[
         returns_list: false,
         module: None,
     },
+    // Runtime Feature Flags (A-03 / P14)
+    CommandPolicy {
+        name: "list_feature_flags",
+        policy: Policy::Session,
+        returns_list: true,
+        module: None,
+    },
+    CommandPolicy {
+        name: "get_feature_flag",
+        policy: Policy::Session,
+        returns_list: false,
+        module: None,
+    },
+    CommandPolicy {
+        name: "set_feature_flag",
+        policy: Policy::Requires("settings:manage"),
+        returns_list: false,
+        module: None,
+    },
     // Scheduler (P08)
     #[cfg(feature = "mod-scheduler")]
     CommandPolicy {
@@ -617,18 +636,16 @@ impl CommandPolicy {
 }
 
 pub fn check_policy(command_name: &str) -> Result<(), CafError> {
-    let policy = match get_command_policy(command_name) {
-        Some(cp) => &cp.policy,
+    let cp = match get_command_policy(command_name) {
+        Some(cp) => cp,
         None => return Err(CafError::Auth(AuthError::Generic("unknown command".into()))),
     };
 
-    match policy {
-        Policy::Public => Ok(()),
+    match &cp.policy {
+        Policy::Public => {}
         Policy::Unlocked => {
-            if crate::vault::is_unlocked().unwrap_or(false) {
-                Ok(())
-            } else {
-                Err(CafError::Vault(VaultError::Locked))
+            if !crate::vault::is_unlocked().unwrap_or(false) {
+                return Err(CafError::Vault(VaultError::Locked));
             }
         }
         Policy::Session => {
@@ -636,17 +653,14 @@ pub fn check_policy(command_name: &str) -> Result<(), CafError> {
                 return Err(CafError::Vault(VaultError::Locked));
             }
             crate::session::get_current_session()?;
-            Ok(())
         }
         Policy::Requires(permission) => {
             if !crate::vault::is_unlocked().unwrap_or(false) {
                 return Err(CafError::Vault(VaultError::Locked));
             }
             let session = crate::session::get_current_session()?;
-            if session.has_permission(permission) {
-                Ok(())
-            } else {
-                Err(CafError::Auth(AuthError::PermissionDenied))
+            if !session.has_permission(permission) {
+                return Err(CafError::Auth(AuthError::PermissionDenied));
             }
         }
         Policy::Pro => {
@@ -657,16 +671,26 @@ pub fn check_policy(command_name: &str) -> Result<(), CafError> {
             #[cfg(feature = "mod-pro")]
             {
                 crate::pro::enforce_pro_gating()?;
-                Ok(())
             }
             #[cfg(not(feature = "mod-pro"))]
             {
-                Err(CafError::generic(
+                return Err(CafError::generic(
                     "Pro module is not compiled into this binary",
-                ))
+                ));
             }
         }
     }
+
+    // A-03 / P14.2: Runtime feature toggle check
+    if let Some(module_name) = cp.module
+        && !crate::features::is_feature_enabled(module_name)?
+    {
+        return Err(CafError::Feature(
+            crate::error::FeatureError::FeatureDisabled,
+        ));
+    }
+
+    Ok(())
 }
 
 pub fn guarded<F, R>(command_name: &'static str, f: F) -> Result<R, CafError>
@@ -684,22 +708,18 @@ pub fn enforce_policy(
     let cp = get_command_policy(command_name)
         .ok_or_else(|| CafError::Auth(AuthError::Generic("unknown command".into())))?;
     match &cp.policy {
-        Policy::Public => Ok(()),
+        Policy::Public => {}
         Policy::Unlocked => {
-            if crate::vault::is_unlocked().unwrap_or(false) {
-                Ok(())
-            } else {
-                Err(CafError::Vault(VaultError::Locked))
+            if !crate::vault::is_unlocked().unwrap_or(false) {
+                return Err(CafError::Vault(VaultError::Locked));
             }
         }
         Policy::Session => {
             if !crate::vault::is_unlocked().unwrap_or(false) {
                 return Err(CafError::Vault(VaultError::Locked));
             }
-            if session.is_some() {
-                Ok(())
-            } else {
-                Err(CafError::Auth(AuthError::Unauthorized))
+            if session.is_none() {
+                return Err(CafError::Auth(AuthError::Unauthorized));
             }
         }
         Policy::Requires(perm) => {
@@ -707,10 +727,8 @@ pub fn enforce_policy(
                 return Err(CafError::Vault(VaultError::Locked));
             }
             let s = session.ok_or(CafError::Auth(AuthError::Unauthorized))?;
-            if s.has_permission(perm) {
-                Ok(())
-            } else {
-                Err(CafError::Auth(AuthError::PermissionDenied))
+            if !s.has_permission(perm) {
+                return Err(CafError::Auth(AuthError::PermissionDenied));
             }
         }
         Policy::Pro => {
@@ -723,14 +741,24 @@ pub fn enforce_policy(
             #[cfg(feature = "mod-pro")]
             {
                 crate::pro::enforce_pro_gating()?;
-                Ok(())
             }
             #[cfg(not(feature = "mod-pro"))]
             {
-                Err(CafError::generic(
+                return Err(CafError::generic(
                     "Pro module is not compiled into this binary",
-                ))
+                ));
             }
         }
     }
+
+    // A-03 / P14.2: Runtime feature toggle check
+    if let Some(module_name) = cp.module
+        && !crate::features::is_feature_enabled(module_name)?
+    {
+        return Err(CafError::Feature(
+            crate::error::FeatureError::FeatureDisabled,
+        ));
+    }
+
+    Ok(())
 }

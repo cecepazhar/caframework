@@ -6,8 +6,9 @@ use crate::data_io::json::JsonStreamWriter;
 use crate::data_io::xlsx::generate_xlsx;
 use crate::error::{CafError, DataIoError};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fs::File;
-use std::io::BufWriter;
+use std::io::{BufWriter, Write};
 use ts_rs::TS;
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -32,27 +33,6 @@ pub fn export_entity(entity_key: &str, format: &str) -> Result<ExportResult, Caf
     }
 
     let conn = crate::db::open()?;
-    let records = adapter.fetch_export_records(&conn, is_super, actor_profile_id)?;
-
-    // Audit super-role private reads if any private record of another profile was fetched
-    if is_super {
-        let private_reads_count = records
-            .iter()
-            .filter(|r| {
-                let owner = r.get("owner_profile_id").map(String::as_str).unwrap_or("");
-                let vis = r.get("visibility").map(String::as_str).unwrap_or("shared");
-                owner != actor_profile_id && vis != "shared"
-            })
-            .count();
-
-        if private_reads_count > 0 {
-            let _ = crate::audit::log_event(
-                "PRIVATE_READ",
-                Some(actor_profile_id),
-                &format!("export_entity={entity_key}, count={private_reads_count}"),
-            );
-        }
-    }
 
     // Determine target export file path
     let exports_dir = crate::paths::data_dir()?.join("exports");
@@ -69,24 +49,40 @@ pub fn export_entity(entity_key: &str, format: &str) -> Result<ExportResult, Caf
 
     let field_names: Vec<&str> = def.fields.iter().map(|f| f.name.as_str()).collect();
 
-    match fmt.as_str() {
+    let (row_count, private_reads_count) = match fmt.as_str() {
         "csv" => {
             let file = File::create(&file_path).map_err(|e| CafError::generic(e.to_string()))?;
-            let mut writer = BufWriter::new(file);
+            let mut writer = BufWriter::with_capacity(128 * 1024, file);
 
             // Write header (no neutralization for field names)
             write_csv_row(&mut writer, &field_names, false)?;
 
             // Write rows (neutralize formula injection)
-            for r in &records {
-                let row_values: Vec<&str> = field_names
-                    .iter()
-                    .map(|f| r.get(*f).map(String::as_str).unwrap_or(""))
-                    .collect();
-                write_csv_row(&mut writer, &row_values, true)?;
-            }
+            let res = adapter.stream_export_records(
+                &conn,
+                is_super,
+                actor_profile_id,
+                &mut |fields| {
+                    let mut row_values = Vec::with_capacity(field_names.len());
+                    for f in &field_names {
+                        let val = fields
+                            .iter()
+                            .find(|(k, _)| k == f)
+                            .map(|(_, v)| *v)
+                            .unwrap_or("");
+                        row_values.push(val);
+                    }
+                    write_csv_row(&mut writer, &row_values, true)?;
+                    Ok(())
+                },
+            )?;
+            writer
+                .flush()
+                .map_err(|e| CafError::generic(e.to_string()))?;
+            res
         }
         "xlsx" => {
+            let records = adapter.fetch_export_records(&conn, is_super, actor_profile_id)?;
             let mut xlsx_rows: Vec<Vec<String>> = Vec::with_capacity(records.len());
             for r in &records {
                 let row: Vec<String> = field_names
@@ -98,16 +94,61 @@ pub fn export_entity(entity_key: &str, format: &str) -> Result<ExportResult, Caf
 
             let file = File::create(&file_path).map_err(|e| CafError::generic(e.to_string()))?;
             generate_xlsx(file, &field_names, &xlsx_rows, true)?;
+            let p_count = if is_super {
+                records
+                    .iter()
+                    .filter(|r| {
+                        let owner = r.get("owner_profile_id").map(String::as_str).unwrap_or("");
+                        let vis = r.get("visibility").map(String::as_str).unwrap_or("shared");
+                        owner != actor_profile_id && vis != "shared"
+                    })
+                    .count()
+            } else {
+                0
+            };
+            (records.len(), p_count)
         }
         "json" => {
             let file = File::create(&file_path).map_err(|e| CafError::generic(e.to_string()))?;
-            let mut writer = JsonStreamWriter::new(BufWriter::new(file))?;
-            for r in &records {
-                writer.write_record(r)?;
-            }
+            let mut writer = JsonStreamWriter::new(BufWriter::with_capacity(128 * 1024, file))?;
+            let mut total_rows = 0usize;
+            let mut p_count = 0usize;
+
+            adapter.stream_export_records(&conn, is_super, actor_profile_id, &mut |fields| {
+                total_rows += 1;
+                let mut map = HashMap::with_capacity(fields.len());
+                for (k, v) in fields {
+                    map.insert((*k).to_string(), (*v).to_string());
+                }
+                if is_super {
+                    let owner = map
+                        .get("owner_profile_id")
+                        .map(String::as_str)
+                        .unwrap_or("");
+                    let vis = map
+                        .get("visibility")
+                        .map(String::as_str)
+                        .unwrap_or("shared");
+                    if owner != actor_profile_id && vis != "shared" {
+                        p_count += 1;
+                    }
+                }
+                writer.write_record(&map)?;
+                Ok(())
+            })?;
             writer.finish()?;
+            (total_rows, p_count)
         }
         _ => return Err(CafError::DataIo(DataIoError::UnsupportedFormat)),
+    };
+
+    // Audit super-role private reads if any private record of another profile was fetched
+    if is_super && private_reads_count > 0 {
+        let _ = crate::audit::log_event(
+            "PRIVATE_READ",
+            Some(actor_profile_id),
+            &format!("export_entity={entity_key}, count={private_reads_count}"),
+        );
     }
 
     let metadata = std::fs::metadata(&file_path).map_err(|e| CafError::generic(e.to_string()))?;
@@ -115,7 +156,7 @@ pub fn export_entity(entity_key: &str, format: &str) -> Result<ExportResult, Caf
     Ok(ExportResult {
         entity: entity_key.to_string(),
         format: fmt,
-        row_count: records.len(),
+        row_count,
         file_path: file_path.to_string_lossy().to_string(),
         file_size_bytes: metadata.len(),
     })

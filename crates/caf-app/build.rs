@@ -161,6 +161,10 @@ const COMMANDS: &[&str] = &[
     "pro_logout",
     #[cfg(feature = "mod-pro")]
     "pro_gated_action",
+    // Runtime Feature Flags (A-03 / P14)
+    "list_feature_flags",
+    "get_feature_flag",
+    "set_feature_flag",
 ];
 
 fn main() {

@@ -337,3 +337,30 @@ export async function invoke_proGatedAction(): Promise<string> {
   return invoke('pro_gated_action');
 }
 
+export interface FeatureToggleItem {
+  key: string;
+  labelEn: string;
+  labelId: string;
+  descriptionEn: string;
+  descriptionId: string;
+  enabled: boolean;
+  locked: boolean;
+  lockedReason?: string | null;
+  isCompiled: boolean;
+  isLicensed: boolean;
+  hasPredicate: boolean;
+}
+
+export async function invoke_listFeatureFlags(): Promise<FeatureToggleItem[]> {
+  return invoke('list_feature_flags');
+}
+
+export async function invoke_getFeatureFlag(key: string): Promise<FeatureToggleItem> {
+  return invoke('get_feature_flag', { key: key });
+}
+
+export async function invoke_setFeatureFlag(key: string, enabled: boolean): Promise<FeatureToggleItem> {
+  return invoke('set_feature_flag', { key: key, enabled: enabled });
+}
+
+

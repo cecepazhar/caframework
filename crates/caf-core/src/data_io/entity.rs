@@ -45,13 +45,35 @@ pub trait EntitySyncAdapter: Send + Sync {
     /// Returns the table name.
     fn table_name(&self) -> &'static str;
 
+    /// Streams all accessible records for export row by row: `on_row(&[(&str, &str)])`.
+    /// Returns `(total_rows, private_reads_count)`.
+    #[allow(clippy::type_complexity)]
+    fn stream_export_records(
+        &self,
+        conn: &rusqlite::Connection,
+        is_super: bool,
+        actor_profile_id: &str,
+        on_row: &mut dyn FnMut(&[(&str, &str)]) -> Result<(), CafError>,
+    ) -> Result<(usize, usize), CafError>;
+
     /// Fetches all accessible records for export as a map of field name -> string value.
     fn fetch_export_records(
         &self,
         conn: &rusqlite::Connection,
         is_super: bool,
         actor_profile_id: &str,
-    ) -> Result<Vec<HashMap<String, String>>, CafError>;
+    ) -> Result<Vec<HashMap<String, String>>, CafError> {
+        let mut list = Vec::new();
+        self.stream_export_records(conn, is_super, actor_profile_id, &mut |fields| {
+            let mut map = HashMap::with_capacity(fields.len());
+            for (k, v) in fields {
+                map.insert((*k).to_string(), (*v).to_string());
+            }
+            list.push(map);
+            Ok(())
+        })?;
+        Ok(list)
+    }
 
     /// Resolves an existing record ID by explicit ID or by natural key values.
     fn resolve_existing_id(
@@ -149,49 +171,14 @@ fn register_builtin_notes(registry: &RwLock<EntityRegistryMap>) {
             "notes"
         }
 
-        fn fetch_export_records(
+        #[allow(clippy::type_complexity)]
+        fn stream_export_records(
             &self,
             conn: &rusqlite::Connection,
             is_super: bool,
             actor_profile_id: &str,
-        ) -> Result<Vec<HashMap<String, String>>, CafError> {
-            fn map_row(r: &rusqlite::Row) -> rusqlite::Result<HashMap<String, String>> {
-                let mut map = HashMap::new();
-                map.insert("id".to_string(), r.get::<_, String>(0)?);
-                map.insert("title".to_string(), r.get::<_, String>(1)?);
-                map.insert(
-                    "content".to_string(),
-                    r.get::<_, Option<String>>(2)?.unwrap_or_default(),
-                );
-                let tags_raw: String = r.get::<_, Option<String>>(3)?.unwrap_or_default();
-                let tags_clean = if tags_raw.starts_with('[') {
-                    serde_json::from_str::<Vec<String>>(&tags_raw)
-                        .unwrap_or_default()
-                        .join(", ")
-                } else {
-                    tags_raw
-                };
-                map.insert("tags".to_string(), tags_clean);
-                map.insert(
-                    "visibility".to_string(),
-                    r.get::<_, Option<String>>(4)?
-                        .unwrap_or_else(|| "shared".into()),
-                );
-                map.insert(
-                    "owner_profile_id".to_string(),
-                    r.get::<_, Option<String>>(5)?.unwrap_or_default(),
-                );
-                map.insert(
-                    "created_at".to_string(),
-                    r.get::<_, Option<String>>(6)?.unwrap_or_default(),
-                );
-                map.insert(
-                    "updated_at".to_string(),
-                    r.get::<_, Option<String>>(7)?.unwrap_or_default(),
-                );
-                Ok(map)
-            }
-
+            on_row: &mut dyn FnMut(&[(&str, &str)]) -> Result<(), CafError>,
+        ) -> Result<(usize, usize), CafError> {
             let sql = if is_super {
                 "SELECT id, title, content, tags, visibility, owner_profile_id, created_at, updated_at FROM notes WHERE deleted_at IS NULL ORDER BY created_at ASC"
             } else {
@@ -202,18 +189,80 @@ fn register_builtin_notes(registry: &RwLock<EntityRegistryMap>) {
                 .prepare(sql)
                 .map_err(|e| CafError::Db(DbError::Generic(e.to_string())))?;
 
-            let rows_result = if is_super {
-                stmt.query_map([], map_row)
+            let mut rows = if is_super {
+                stmt.query([])
             } else {
-                stmt.query_map(rusqlite::params![actor_profile_id], map_row)
-            };
+                stmt.query(rusqlite::params![actor_profile_id])
+            }
+            .map_err(|e| CafError::Db(DbError::Generic(e.to_string())))?;
 
-            let rows = rows_result
+            let mut total_count = 0usize;
+            let mut private_reads_count = 0usize;
+
+            while let Some(r) = rows
+                .next()
                 .map_err(|e| CafError::Db(DbError::Generic(e.to_string())))?
-                .collect::<Result<Vec<_>, _>>()
-                .map_err(|e| CafError::Db(DbError::Generic(e.to_string())))?;
+            {
+                total_count += 1;
+                let id: String = r
+                    .get(0)
+                    .map_err(|e| CafError::Db(DbError::Generic(e.to_string())))?;
+                let title: String = r
+                    .get(1)
+                    .map_err(|e| CafError::Db(DbError::Generic(e.to_string())))?;
+                let content: String = r
+                    .get::<_, Option<String>>(2)
+                    .map_err(|e| CafError::Db(DbError::Generic(e.to_string())))?
+                    .unwrap_or_default();
+                let tags_raw: String = r
+                    .get::<_, Option<String>>(3)
+                    .map_err(|e| CafError::Db(DbError::Generic(e.to_string())))?
+                    .unwrap_or_default();
+                let tags = if tags_raw == "[]" || tags_raw.is_empty() {
+                    String::new()
+                } else if tags_raw.starts_with('[') {
+                    serde_json::from_str::<Vec<String>>(&tags_raw)
+                        .unwrap_or_default()
+                        .join(", ")
+                } else {
+                    tags_raw
+                };
+                let visibility: String = r
+                    .get::<_, Option<String>>(4)
+                    .map_err(|e| CafError::Db(DbError::Generic(e.to_string())))?
+                    .unwrap_or_else(|| "shared".into());
+                let owner: String = r
+                    .get::<_, Option<String>>(5)
+                    .map_err(|e| CafError::Db(DbError::Generic(e.to_string())))?
+                    .unwrap_or_default();
+                let created_at: String = r
+                    .get::<_, Option<String>>(6)
+                    .map_err(|e| CafError::Db(DbError::Generic(e.to_string())))?
+                    .unwrap_or_default();
+                let updated_at: String = r
+                    .get::<_, Option<String>>(7)
+                    .map_err(|e| CafError::Db(DbError::Generic(e.to_string())))?
+                    .unwrap_or_default();
 
-            Ok(rows)
+                if is_super && owner != actor_profile_id && visibility != "shared" {
+                    private_reads_count += 1;
+                }
+
+                let fields = [
+                    ("id", id.as_str()),
+                    ("title", title.as_str()),
+                    ("content", content.as_str()),
+                    ("tags", tags.as_str()),
+                    ("visibility", visibility.as_str()),
+                    ("owner_profile_id", owner.as_str()),
+                    ("created_at", created_at.as_str()),
+                    ("updated_at", updated_at.as_str()),
+                ];
+
+                on_row(&fields)?;
+            }
+
+            Ok((total_count, private_reads_count))
         }
 
         fn resolve_existing_id(

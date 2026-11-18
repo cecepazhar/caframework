@@ -887,6 +887,7 @@ const id: Dictionary = {
     tabs: {
       profile: 'Profil',
       updates: 'Pembaruan',
+      features: 'Fitur',
       ai: 'Asisten AI',
       subscription: 'Langganan',
       security: 'Keamanan Vault',
@@ -896,6 +897,16 @@ const id: Dictionary = {
       dataIo: 'Impor & Ekspor Data',
       shortcuts: 'Pintasan',
       performance: 'Performa'
+    },
+    features: {
+      title: 'Saklar Fitur Runtime',
+      subtitle: 'Aktifkan atau nonaktifkan modul/fitur runtime tanpa restart. Perubahan dicatat di log audit.',
+      empty: 'Tidak ada saklar fitur tersedia.',
+      lockedBadge: 'Terkunci',
+      uncompiledBadge: 'Tidak Dikompilasi',
+      lockedReasonLabel: 'Alasan kunci',
+      toastEnabled: 'Fitur "{{key}}" berhasil diaktifkan.',
+      toastDisabled: 'Fitur "{{key}}" berhasil dinonaktifkan.'
     },
     profile: {
       localNote: 'Profil lokal — hanya tersimpan di perangkat ini, tanpa akun atau email.',

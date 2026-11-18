@@ -257,6 +257,10 @@ pub fn run_with_start(start: std::time::Instant) {
             commands::pro_logout,
             #[cfg(feature = "mod-pro")]
             commands::pro_gated_action,
+            // Runtime Feature Flags (A-03 / P14)
+            commands::list_feature_flags,
+            commands::get_feature_flag,
+            commands::set_feature_flag,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

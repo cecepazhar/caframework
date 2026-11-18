@@ -31,6 +31,7 @@ pub fn open_encrypted(data_dir: &Path, passphrase: &str) -> Result<Connection, C
     };
 
     crate::migrations::run_migrations(&mut conn)?;
+    crate::features::seed_features(&mut conn)?;
 
     #[cfg(feature = "mod-ai-advanced")]
     {

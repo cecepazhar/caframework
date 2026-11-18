@@ -1,8 +1,10 @@
 //! Formula injection protection for spreadsheet and CSV exports.
 
+use std::borrow::Cow;
+
 /// Neutralizes potential formula injection in cell content per OWASP recommendations.
 /// Any string beginning with `=`, `+`, `-`, `@`, `\t`, or `\r` is prepended with `'`.
-pub fn neutralize_cell(val: &str) -> String {
+pub fn neutralize_cell<'a>(val: &'a str) -> Cow<'a, str> {
     let trimmed = val.trim_start();
     if trimmed.starts_with('=')
         || trimmed.starts_with('+')
@@ -11,9 +13,9 @@ pub fn neutralize_cell(val: &str) -> String {
         || trimmed.starts_with('\t')
         || trimmed.starts_with('\r')
     {
-        format!("'{val}")
+        Cow::Owned(format!("'{val}"))
     } else {
-        val.to_string()
+        Cow::Borrowed(val)
     }
 }
 
