@@ -1,0 +1,13 @@
+[variant]
+key = "unknown-mod"
+extends = "app.toml"
+
+[variant.app]
+name = "Example Unknown"
+identifier = "com.example.app.unknown"
+accent = "sky"
+platforms = ["linux"]
+icon = "assets/variants/unknown/icon.png"
+
+[variant.modules]
+include = ["non_existent_module_xyz"]

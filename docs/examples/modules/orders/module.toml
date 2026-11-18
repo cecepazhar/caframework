@@ -1,0 +1,21 @@
+[module]
+key = "orders"
+label_en = "Orders"
+label_id = "Pesanan"
+cargo_feature = "mod-orders"
+depends_on = ["catalog"]
+conflicts_with = []
+
+[[module.features]]
+key = "reservation"
+default = true
+locked_when = "has_open_reservation"
+
+[module.provides]
+menus = []
+permissions = ["orders:view", "orders:create", "orders:manage"]
+entities = ["orders", "order_lines"]
+jobs = []
+integrations = []
+settings_sections = ["orders"]
+ai_context_providers = []

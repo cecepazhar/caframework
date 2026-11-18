@@ -1,0 +1,16 @@
+[module]
+key = "analytics"
+label_en = "Analytics"
+label_id = "Analitik"
+cargo_feature = "mod-analytics"
+depends_on = ["orders"]
+conflicts_with = []
+
+[module.provides]
+menus = []
+permissions = ["analytics:view"]
+entities = ["metric_snapshots"]
+jobs = []
+integrations = []
+settings_sections = ["analytics"]
+ai_context_providers = []

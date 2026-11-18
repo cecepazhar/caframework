@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use std::sync::RwLock;
 
 static CUSTOM_DATA_DIR: RwLock<Option<PathBuf>> = RwLock::new(None);
+static DYNAMIC_APP_IDENTIFIER: RwLock<Option<String>> = RwLock::new(None);
 
 /// Explicitly configure the application data directory at runtime (e.g. from Tauri AppHandle on Android/iOS).
 pub fn set_custom_data_dir(path: PathBuf) -> Result<(), CafError> {
@@ -12,6 +13,30 @@ pub fn set_custom_data_dir(path: PathBuf) -> Result<(), CafError> {
         *lock = Some(path);
     }
     Ok(())
+}
+
+/// Override the application identifier used for data directory resolution at runtime.
+pub fn set_app_identifier(id: impl Into<String>) {
+    if let Ok(mut lock) = DYNAMIC_APP_IDENTIFIER.write() {
+        *lock = Some(id.into());
+    }
+}
+
+/// Reset the application identifier override.
+pub fn reset_app_identifier() {
+    if let Ok(mut lock) = DYNAMIC_APP_IDENTIFIER.write() {
+        *lock = None;
+    }
+}
+
+/// Returns the current application identifier (either dynamic override or generated constant).
+pub fn app_identifier() -> String {
+    if let Ok(lock) = DYNAMIC_APP_IDENTIFIER.read()
+        && let Some(ref id) = *lock
+    {
+        return id.clone();
+    }
+    crate::generated::prefix::APP_IDENTIFIER.to_string()
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -74,14 +99,14 @@ fn resolve_data_dir_with(env_override: Option<&str>) -> Result<DataDirInfo, CafE
 
     if portable_marker_present()? {
         return Ok(DataDirInfo {
-            path: PathBuf::from("./caframework-data"),
+            path: PathBuf::from(format!("./{}-data", app_identifier())),
             source: DataDirSource::Portable,
         });
     }
 
     if let Some(base) = directories::BaseDirs::new() {
         return Ok(DataDirInfo {
-            path: base.data_dir().join("caframework"),
+            path: base.data_dir().join(app_identifier()),
             source: DataDirSource::PerOsDefault,
         });
     }
@@ -89,14 +114,14 @@ fn resolve_data_dir_with(env_override: Option<&str>) -> Result<DataDirInfo, CafE
     // Fallbacks for Android & embedded systems where BaseDirs::new() returns None
     if let Ok(files_dir) = std::env::var("FILES_DIR") {
         return Ok(DataDirInfo {
-            path: PathBuf::from(files_dir).join("caframework"),
+            path: PathBuf::from(files_dir).join(app_identifier()),
             source: DataDirSource::PerOsDefault,
         });
     }
 
     if let Ok(home) = std::env::var("HOME") {
         return Ok(DataDirInfo {
-            path: PathBuf::from(home).join(".local/share/caframework"),
+            path: PathBuf::from(home).join(format!(".local/share/{}", app_identifier())),
             source: DataDirSource::PerOsDefault,
         });
     }
@@ -104,7 +129,7 @@ fn resolve_data_dir_with(env_override: Option<&str>) -> Result<DataDirInfo, CafE
     #[cfg(target_os = "android")]
     {
         return Ok(DataDirInfo {
-            path: PathBuf::from("/data/data/com.fathforce.caframework/files/caframework"),
+            path: PathBuf::from(format!("/data/data/{}/files/caframework", app_identifier())),
             source: DataDirSource::PerOsDefault,
         });
     }
@@ -193,5 +218,44 @@ mod tests {
     fn db_path_is_data_dir_slash_caframework_db() {
         let dir = PathBuf::from("/tmp/x");
         assert_eq!(db_path(&dir), PathBuf::from("/tmp/x/caframework.db"));
+    }
+
+    #[test]
+    fn two_variants_have_separate_data_dirs() {
+        // Test P15.3: Two variants keep separate data dirs on Linux with CAF_DATA_DIR unset
+        // Variant 1: Lite
+        set_app_identifier("com.example.app.lite");
+        let info_lite = resolve_data_dir_with(None).expect("resolve lite");
+        assert_eq!(info_lite.source, DataDirSource::PerOsDefault);
+        assert!(
+            info_lite
+                .path
+                .to_string_lossy()
+                .contains("com.example.app.lite"),
+            "data dir path must contain variant identifier, got: {:?}",
+            info_lite.path
+        );
+
+        // Variant 2: Pro
+        set_app_identifier("com.example.app.pro");
+        let info_pro = resolve_data_dir_with(None).expect("resolve pro");
+        assert_eq!(info_pro.source, DataDirSource::PerOsDefault);
+        assert!(
+            info_pro
+                .path
+                .to_string_lossy()
+                .contains("com.example.app.pro"),
+            "data dir path must contain variant identifier, got: {:?}",
+            info_pro.path
+        );
+
+        // They must NOT be equal
+        assert_ne!(
+            info_lite.path, info_pro.path,
+            "two variants must have separate isolated data directories"
+        );
+
+        // Cleanup
+        reset_app_identifier();
     }
 }

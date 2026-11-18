@@ -1,0 +1,27 @@
+[variant]
+key = "pro"
+extends = "app.toml"
+
+[variant.app]
+name = "Example Pro"
+identifier = "com.example.app.pro"
+accent = "emerald"
+platforms = ["linux", "windows", "macos"]
+icon = "assets/variants/pro/icon.png"
+
+[variant.modules]
+include = ["catalog", "orders", "analytics"]
+framework = { ai = true, scheduler = true }
+
+[variant.defaults]
+"orders.reservation" = true
+
+[variant.locked]
+keys = ["catalog", "orders"]
+
+[variant.pro]
+gcc_product_id = "gcc-prod-example-pro"
+
+[variant.pro.features]
+ai_assistant = "pro"
+analytics = "pro"

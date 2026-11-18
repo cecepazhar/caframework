@@ -1,0 +1,13 @@
+[variant]
+key = "invalid-override"
+extends = "app.toml"
+
+[variant.app]
+name = "Example Invalid"
+identifier = "com.example.app.invalid"
+accent = "invalid_rainbow_color"
+platforms = ["linux"]
+icon = "assets/variants/invalid/icon.png"
+
+[variant.modules]
+framework = { unknown_framework_mod = true }

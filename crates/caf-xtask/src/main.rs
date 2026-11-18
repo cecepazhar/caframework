@@ -62,6 +62,11 @@ enum Commands {
         #[arg(short, long, default_value_t = 8888)]
         port: u16,
     },
+    /// Manage build variants (A-02)
+    Variant {
+        #[command(subcommand)]
+        command: variant_cmd::VariantCommand,
+    },
 }
 
 fn load_and_validate_config(path: &Path) -> Result<AppConfigFile, Box<dyn std::error::Error>> {
@@ -234,6 +239,7 @@ mod codegen;
 pub mod gcc_mock;
 mod guard;
 mod scanner;
+pub mod variant_cmd;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
@@ -256,6 +262,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::GccMock { port } => {
             let rt = tokio::runtime::Runtime::new()?;
             rt.block_on(gcc_mock::run_mock_server(port))
+        }
+        Commands::Variant { command } => {
+            let root = std::env::current_dir()?;
+            variant_cmd::run_variant_cmd(&command, &root)
         }
     }
 }

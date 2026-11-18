@@ -6,6 +6,13 @@ set -eo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+ALL_VARIANTS=0
+for arg in "$@"; do
+  if [ "$arg" = "--all-variants" ]; then
+    ALL_VARIANTS=1
+  fi
+done
+
 export CAF_DATA_DIR="$(mktemp -d)"
 export OPENSSL_NO_VENDOR=1
 trap 'rm -rf "$CAF_DATA_DIR"' EXIT
@@ -88,6 +95,16 @@ run_step "VS-G: xtask guard" cargo run -p caf-xtask -- guard
 
 if [ -f scripts/guard-negatives.sh ]; then
   run_step "VS-G: guard negatives" bash scripts/guard-negatives.sh
+fi
+
+# --- VS-V: Variants (A-02, P15) ---
+run_step "VS-V: xtask variant validate --all" cargo run -p caf-xtask -- variant validate --all
+run_step "VS-V: cargo test -p caf-xtask --test variants" cargo test -p caf-xtask --test variants
+
+if [ "$ALL_VARIANTS" = "1" ]; then
+  for v in lite pro; do
+    run_step "VS-V: variant build $v" cargo run -p caf-xtask -- variant build --variant "$v" --target linux
+  done
 fi
 
 # --- VS-A: Tauri App (if system dependencies present) ---

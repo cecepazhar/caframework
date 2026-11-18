@@ -1,0 +1,16 @@
+[module]
+key = "catalog"
+label_en = "Catalog"
+label_id = "Katalog"
+cargo_feature = "mod-catalog"
+depends_on = []
+conflicts_with = []
+
+[module.provides]
+menus = []
+permissions = ["catalog:view", "catalog:manage"]
+entities = ["products", "categories"]
+jobs = []
+integrations = []
+settings_sections = ["catalog"]
+ai_context_providers = []

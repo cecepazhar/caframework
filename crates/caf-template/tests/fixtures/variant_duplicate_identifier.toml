@@ -1,0 +1,10 @@
+[variant]
+key = "dup-id"
+extends = "app.toml"
+
+[variant.app]
+name = "CAFramework Dup"
+identifier = "com.fathforce.caframework"
+accent = "indigo"
+platforms = ["linux"]
+icon = "assets/logo.svg"
