@@ -16,3 +16,4 @@ CREATE TABLE IF NOT EXISTS feature_flags (
 
 CREATE INDEX IF NOT EXISTS idx_feature_flags_owner ON feature_flags(owner_profile_id);
 CREATE INDEX IF NOT EXISTS idx_feature_flags_updated ON feature_flags(updated_at);
+

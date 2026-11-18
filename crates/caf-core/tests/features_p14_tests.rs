@@ -118,6 +118,7 @@ fn test_p14_1_table_and_core_api() {
         locked: false,
         locked_reason: None,
         locked_when_predicate: None,
+        pro_gated: false,
     });
 
     let custom_feat = get_feature("custom.orders").expect("get custom feature");
@@ -214,6 +215,7 @@ fn test_p14_3_locked_when_predicates_and_static_locks() {
         locked: false,
         locked_reason: None,
         locked_when_predicate: Some("has_open_reservation".to_string()),
+        pro_gated: false,
     });
 
     // When notes table has no rows: disabling succeeds

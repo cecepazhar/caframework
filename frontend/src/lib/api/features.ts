@@ -21,3 +21,4 @@ export async function setFeatureFlag(
 ): Promise<FeatureToggleItem> {
   return invoke_setFeatureFlag(key, enabled);
 }
+

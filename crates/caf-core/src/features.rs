@@ -28,6 +28,8 @@ pub struct FeatureDefinition {
     pub locked: bool,
     pub locked_reason: Option<String>,
     pub locked_when_predicate: Option<String>,
+    #[serde(default)]
+    pub pro_gated: bool,
 }
 
 /// Sync-ready record stored in the `feature_flags` database table.
@@ -89,6 +91,7 @@ pub fn builtin_definitions() -> Vec<FeatureDefinition> {
             locked: true,
             locked_reason: Some("Profiles module is mandatory and cannot be disabled".to_string()),
             locked_when_predicate: None,
+            pro_gated: false,
         },
         FeatureDefinition {
             key: "ai".to_string(),
@@ -100,6 +103,7 @@ pub fn builtin_definitions() -> Vec<FeatureDefinition> {
             locked: false,
             locked_reason: None,
             locked_when_predicate: None,
+            pro_gated: false,
         },
         FeatureDefinition {
             key: "integrations".to_string(),
@@ -111,6 +115,7 @@ pub fn builtin_definitions() -> Vec<FeatureDefinition> {
             locked: false,
             locked_reason: None,
             locked_when_predicate: None,
+            pro_gated: false,
         },
         FeatureDefinition {
             key: "scheduler".to_string(),
@@ -122,6 +127,7 @@ pub fn builtin_definitions() -> Vec<FeatureDefinition> {
             locked: false,
             locked_reason: None,
             locked_when_predicate: None,
+            pro_gated: false,
         },
         FeatureDefinition {
             key: "feedback".to_string(),
@@ -133,6 +139,7 @@ pub fn builtin_definitions() -> Vec<FeatureDefinition> {
             locked: false,
             locked_reason: None,
             locked_when_predicate: None,
+            pro_gated: false,
         },
         FeatureDefinition {
             key: "updater".to_string(),
@@ -144,6 +151,7 @@ pub fn builtin_definitions() -> Vec<FeatureDefinition> {
             locked: false,
             locked_reason: None,
             locked_when_predicate: None,
+            pro_gated: false,
         },
         FeatureDefinition {
             key: "crash".to_string(),
@@ -155,6 +163,7 @@ pub fn builtin_definitions() -> Vec<FeatureDefinition> {
             locked: false,
             locked_reason: None,
             locked_when_predicate: None,
+            pro_gated: false,
         },
         FeatureDefinition {
             key: "pro".to_string(),
@@ -166,6 +175,7 @@ pub fn builtin_definitions() -> Vec<FeatureDefinition> {
             locked: true,
             locked_reason: Some("Pro licensing system cannot be disabled at runtime".to_string()),
             locked_when_predicate: None,
+            pro_gated: false,
         },
     ]
 }
@@ -223,16 +233,20 @@ pub fn is_module_compiled(key: &str) -> bool {
 
 /// Check if the feature is licensed (entitlements check).
 pub fn is_module_licensed(key: &str) -> bool {
-    if key == "pro" {
-        #[cfg(feature = "mod-pro")]
-        {
-            crate::pro::get_pro_status()
-                .map(|s| s.is_pro)
-                .unwrap_or(false)
-        }
-        #[cfg(not(feature = "mod-pro"))]
-        {
-            false
+    if let Some(def) = get_feature_definition(key) {
+        if def.pro_gated {
+            #[cfg(feature = "mod-pro")]
+            {
+                crate::pro::get_pro_status()
+                    .map(|s| s.is_pro)
+                    .unwrap_or(false)
+            }
+            #[cfg(not(feature = "mod-pro"))]
+            {
+                false
+            }
+        } else {
+            true
         }
     } else {
         true
