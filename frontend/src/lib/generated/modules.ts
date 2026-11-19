@@ -2,7 +2,7 @@
 
 export const ENABLED_MODULES = {
   profiles: true,
-  ai: false,
+  ai: true,
   pro: true,
   feedback: true,
   updater: true,

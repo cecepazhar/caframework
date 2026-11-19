@@ -14,7 +14,7 @@ pub struct EnabledModules {
 
 pub const ENABLED_MODULES: EnabledModules = EnabledModules {
     profiles: true,
-    ai: false,
+    ai: true,
     pro: true,
     feedback: true,
     updater: true,

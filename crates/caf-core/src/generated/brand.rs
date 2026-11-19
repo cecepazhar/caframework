@@ -20,6 +20,6 @@ pub const BRAND: BrandInfo = BrandInfo {
     phone: "+6285220696117",
     support_url: "",
     copyright: "© {year} Cecep Saeful Azhar Hidayat, ST",
-    logo: "assets/variants/lite/icon.png",
+    logo: "assets/logo.svg",
     show_on_lock_screen: true,
 };
