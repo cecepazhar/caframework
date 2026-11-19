@@ -12,6 +12,7 @@ const en = {
     never: 'never'
   },
   common: {
+    navigation: 'Navigation',
     connect: 'Connect',
     cancel: 'Cancel',
     save: 'Save',

@@ -13,6 +13,7 @@ const id: Dictionary = {
     never: 'belum pernah'
   },
   common: {
+    navigation: 'Navigasi',
     connect: 'Sambungkan',
     cancel: 'Batal',
     save: 'Simpan',

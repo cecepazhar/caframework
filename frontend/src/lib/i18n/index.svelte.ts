@@ -98,7 +98,14 @@ export function t(key: string, vars?: Record<string, string | number>): string {
 
   if (typeof value !== 'string') {
     if (import.meta.env.DEV) console.warn(`[i18n] missing key: ${key}`);
-    return key;
+    // Safe humanized fallback that never shows a raw key (FR-10, P17.1)
+    const leaf = key.split('.').pop() || key;
+    const humanized = leaf
+      .replace(/([A-Z])/g, ' $1')
+      .replace(/[_-]/g, ' ')
+      .trim()
+      .replace(/^\w/, (c) => c.toUpperCase());
+    return interpolate(humanized, vars);
   }
   return interpolate(value, vars);
 }

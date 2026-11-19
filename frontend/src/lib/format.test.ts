@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { formatNumber, formatCurrency, formatDate, formatDateTime, formatRelative } from './format';
+import { formatNumber, formatCurrency, formatDate, formatDateTime, formatRelative, formatPhone } from './format';
 import { setLocale } from './i18n/index.svelte';
 
-describe('Locale formatters (F15.4)', () => {
+describe('Locale formatters (F15.4, P17.2)', () => {
   it('formats numbers correctly per locale', () => {
     setLocale('en');
     expect(formatNumber(1234567.5)).toBe('1,234,567.5');
@@ -31,5 +31,16 @@ describe('Locale formatters (F15.4)', () => {
     expect(formatDateTime(d)).toBeDefined();
 
     expect(formatRelative(Date.now() - 60000)).toBeDefined();
+  });
+
+  it('formats phone numbers correctly per locale (P17.2)', () => {
+    setLocale('id');
+    expect(formatPhone('085220696117')).toBe('0852 2069 6117');
+    expect(formatPhone('0852-2069-6117')).toBe('0852 2069 6117');
+    expect(formatPhone('+6285220696117')).toBe('+62 852 2069 6117');
+    expect(formatPhone('6285220696117')).toBe('+62 852 2069 6117');
+
+    setLocale('en');
+    expect(formatPhone('+14155552671')).toBe('+1 415 5552671');
   });
 });

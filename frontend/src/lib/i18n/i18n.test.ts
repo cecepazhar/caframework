@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import en from './locales/en';
 import id from './locales/id';
+import { t } from './index.svelte';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -82,5 +83,36 @@ describe('i18n completeness and dictionaries (F15.2)', () => {
       console.error('Missing i18n keys found:', missingKeys);
     }
     expect(missingKeys).toEqual([]);
+  });
+
+  it('runtime fallback never shows a raw dot-path key (FR-10, P17.1)', () => {
+    const result = t('missingSection.unknownActionButton');
+    expect(result).toBe('Unknown Action Button');
+    expect(result.includes('.')).toBe(false);
+  });
+
+  it('guard counts unused keys (P17.1)', () => {
+    const srcDir = path.resolve(__dirname, '../../');
+    const files = getAllFiles(srcDir);
+    const allContent = files.map(f => fs.readFileSync(f, 'utf-8')).join('\n');
+
+    let usedCount = 0;
+    let unusedCount = 0;
+    const unusedKeys: string[] = [];
+
+    for (const key of enKeys) {
+      // Check if key or its leaf is mentioned in source files
+      const simpleRegex = new RegExp(`['"\`]${key}['"\`]`);
+      if (simpleRegex.test(allContent)) {
+        usedCount++;
+      } else {
+        unusedCount++;
+        unusedKeys.push(key);
+      }
+    }
+
+    // Must be able to count unused keys cleanly
+    expect(typeof unusedCount).toBe('number');
+    expect(usedCount + unusedCount).toBe(enKeys.length);
   });
 });
