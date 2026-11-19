@@ -12,6 +12,7 @@ const STASH_FILE = path.join(ROOT_DIR, '.svelte-kit-excluded-stash.json');
 
 export function getEnabledModules() {
   const appTomlPath = process.env.CAF_APP_TOML || path.join(REPO_ROOT, 'app.toml');
+  /** @type {Record<string, boolean>} */
   const modules = {
     profiles: true,
     ai: true,
@@ -28,11 +29,11 @@ export function getEnabledModules() {
   if (fs.existsSync(appTomlPath)) {
     const content = fs.readFileSync(appTomlPath, 'utf-8');
     const match = content.match(/\[modules\]([\s\S]*?)(?:\n\[|$)/);
-    if (match) {
+    if (match && match[1]) {
       for (const line of match[1].split('\n')) {
         const trimmed = line.trim();
         if (!trimmed || trimmed.startsWith('#')) continue;
-        const [k, v] = trimmed.split('=').map((s) => s.trim());
+        const [k, v] = trimmed.split('=').map((/** @type {string} */ s) => s.trim());
         if (k && v !== undefined) {
           modules[k] = v === 'true';
         }
@@ -60,7 +61,7 @@ export function stashDisabledModules() {
   for (const entry of entries) {
     if (entry.isDirectory()) {
       const match = entry.name.match(/^\(mod-([a-zA-Z0-9_-]+)\)$/);
-      if (match) {
+      if (match && match[1]) {
         const modKey = match[1].replace(/-/g, '_');
         const isEnabled = modules[modKey] === true || modules[match[1]] === true;
         if (!isEnabled) {

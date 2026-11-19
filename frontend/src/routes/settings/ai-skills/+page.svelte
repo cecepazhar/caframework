@@ -142,8 +142,10 @@
 
 <div class="p-6 max-w-6xl mx-auto space-y-6">
   <PageHeader
-    title="Custom Skills Catalog (@skills)"
-    subtitle="Skill modular yang disuntikkan secara otomatis ke Master AI Router saat trigger dipanggil dalam terminal atau floating chat."
+    icon="M13 10V3L4 14h7v7l9-11h-7z"
+    accent="sky"
+    title={"Custom Skills Catalog (@skills)"}
+    subtitle={"Skill modular yang disuntikkan secara otomatis ke Master AI Router saat trigger dipanggil dalam terminal atau floating chat."}
   />
 
   <AiNavTabs active="skills" />
@@ -189,7 +191,7 @@
                   type="button"
                   onclick={() => openEdit(s)}
                   class="p-1.5 text-neutral-400 hover:text-sky-500 transition"
-                  title="Edit Skill"
+                  title={"Edit Skill"}
                 >
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
                 </button>
@@ -198,7 +200,7 @@
                     type="button"
                     onclick={() => handleDelete(s)}
                     class="p-1.5 text-neutral-400 hover:text-rose-500 transition"
-                    title="Hapus Skill"
+                    title={"Hapus Skill"}
                   >
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                   </button>
@@ -244,37 +246,37 @@
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class={LABEL}>Skill Name (Unique Identifier)</label>
-            <input type="text" bind:value={formName} placeholder="k8s-triage" class={INPUT} />
+            <input type="text" bind:value={formName} placeholder={"k8s-triage"} class={INPUT} />
           </div>
           <div>
             <label class={LABEL}>Category</label>
-            <input type="text" bind:value={formCategory} placeholder="devops, sre, security" class={INPUT} />
+            <input type="text" bind:value={formCategory} placeholder={"devops, sre, security"} class={INPUT} />
           </div>
         </div>
 
         <div>
           <label class={LABEL}>Skill Title</label>
-          <input type="text" bind:value={formTitle} placeholder="Kubernetes Pod Crash Triage" class={INPUT} />
+          <input type="text" bind:value={formTitle} placeholder={"Kubernetes Pod Crash Triage"} class={INPUT} />
         </div>
 
         <div>
           <label class={LABEL}>Description</label>
-          <input type="text" bind:value={formDescription} placeholder="Ringkasan singkat fungsi skill" class={INPUT} />
+          <input type="text" bind:value={formDescription} placeholder={"Ringkasan singkat fungsi skill"} class={INPUT} />
         </div>
 
         <div>
           <label class={LABEL}>Triggers (Koma pisah)</label>
-          <input type="text" bind:value={formTriggers} placeholder="@k8s-triage, k8s crash, pod error" class={INPUT} />
+          <input type="text" bind:value={formTriggers} placeholder={"@k8s-triage, k8s crash, pod error"} class={INPUT} />
         </div>
 
         <div>
           <label class={LABEL}>Allowed Tools (Koma pisah)</label>
-          <input type="text" bind:value={formTools} placeholder="terminal, file_reader, kubctl" class={INPUT} />
+          <input type="text" bind:value={formTools} placeholder={"terminal, file_reader, kubctl"} class={INPUT} />
         </div>
 
         <div>
           <label class={LABEL}>System Instructions (SOP Prompt)</label>
-          <textarea rows="6" bind:value={formInstructions} class={TEXTAREA} placeholder="Instruksi spesifik SOP saat skill ini aktif..."></textarea>
+          <textarea rows="6" bind:value={formInstructions} class={TEXTAREA} placeholder={"Instruksi spesifik SOP saat skill ini aktif..."}></textarea>
         </div>
       </div>
 

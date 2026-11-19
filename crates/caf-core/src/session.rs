@@ -172,6 +172,18 @@ pub fn session_info() -> Result<SessionInfo, CafError> {
     get_current_session().map(|s| s.to_info())
 }
 
+/// Returns the list of permission keys granted to the active session.
+/// If vault is locked or no session exists, returns an empty list.
+pub fn session_permissions() -> Result<Vec<String>, CafError> {
+    if !crate::vault::is_unlocked().unwrap_or(false) {
+        return Ok(Vec::new());
+    }
+    match get_current_session() {
+        Ok(s) => Ok(s.permissions.into_iter().collect()),
+        Err(_) => Ok(Vec::new()),
+    }
+}
+
 #[derive(Debug, Default)]
 pub struct SessionManager {
     active_session: Option<Session>,

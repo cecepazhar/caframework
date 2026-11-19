@@ -84,7 +84,7 @@
     subtitle={'Enterprise data grid pattern featuring fuzzy search, column filters, bulk row selection, and pagination.'}
     accent="indigo"
   >
-    {#snippet action()}
+    {#snippet actions()}
       <div class="flex items-center gap-2">
         <Button variant="outline" size="sm">Export CSV</Button>
         <Button variant="primary" size="sm">+ New Transaction</Button>
@@ -211,9 +211,9 @@
         </p>
         <Pagination
           total={filtered.length}
-          perPage={pageSize}
+          pageSize={pageSize}
           page={currentPage}
-          onchange={(p) => (currentPage = p)}
+          onPageChange={(p: number) => (currentPage = p)}
         />
       </div>
     {/if}

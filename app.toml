@@ -38,6 +38,10 @@ integrations = true
 scheduler = true
 support_page = false
 
+[navigation]
+primary_action = "notes"
+collapsed_default = false
+
 [rbac]
 super_role = "super_admin"
 allow_runtime_roles = true

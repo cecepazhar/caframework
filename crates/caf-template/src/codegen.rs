@@ -81,6 +81,20 @@ pub fn generate_all_with_modules(
     });
 
     // 2. TS nav.ts (also write navItems.generated.ts for backwards compatibility)
+    let nav_primary = config
+        .navigation
+        .as_ref()
+        .and_then(|n| n.primary_action.clone());
+    let nav_primary_ts = match &nav_primary {
+        Some(s) => format!("{s:?}"),
+        None => "null".to_string(),
+    };
+    let nav_collapsed = config
+        .navigation
+        .as_ref()
+        .and_then(|n| n.collapsed_default)
+        .unwrap_or(false);
+
     let mut nav_ts = format!(
         r#"{GENERATED_HEADER}export interface GeneratedNavItem {{
   key: string;
@@ -91,6 +105,16 @@ pub fn generate_all_with_modules(
   group: string;
   permission: string;
 }}
+
+export interface NavigationConfig {{
+  primaryAction: string | null;
+  collapsedDefault: boolean;
+}}
+
+export const NAVIGATION_CONFIG: NavigationConfig = {{
+  primaryAction: {nav_primary_ts},
+  collapsedDefault: {nav_collapsed},
+}};
 
 export const GENERATED_NAV_ITEMS: GeneratedNavItem[] = [
 "#

@@ -49,6 +49,12 @@ const id: Dictionary = {
     rename: 'Ganti nama',
     clone: 'Duplikat',
     clear: 'Bersihkan',
+    developer: 'Pengembang',
+    company: 'Perusahaan / Studio',
+    website: 'Situs Web',
+    email: 'Email Kontak',
+    phone: 'Telepon',
+    support: 'Dukungan',
     select: 'Pilih',
     selected: 'Terpilih',
     optional: 'Opsional',
@@ -1363,9 +1369,7 @@ const id: Dictionary = {
     setGroup: 'Atur Grup',
     removeGroup: 'Hapus dari Grup',
     closeGroup: 'Tutup Grup "{{group}}"',
-    closeSession: 'Tutup sesi',
-    allMenus: 'Semua Menu',
-    bottomNav: 'Navigasi Bawah'
+    closeSession: 'Tutup sesi'
   },
   sftp: {
     title: 'Berkas (SFTP)',

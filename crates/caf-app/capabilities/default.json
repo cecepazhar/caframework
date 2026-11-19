@@ -23,6 +23,7 @@
     "allow-profile-unlock",
     "allow-profile-lock",
     "allow-session-info",
+    "allow-session-permissions",
     "allow-list-roles",
     "allow-save-role",
     "allow-delete-role",

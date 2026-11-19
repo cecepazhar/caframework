@@ -22,22 +22,24 @@
   import WindowControls from '$lib/components/WindowControls.svelte';
   import WorkspaceMenu from '$lib/components/WorkspaceMenu.svelte';
   import Logo from '$lib/components/Logo.svelte';
-  import { navItems as getNavItems, settingsNavItem } from '$lib/navItems';
+  import { navItems as getNavItems, settingsNavItem, getNavigationConfig, primaryNavItem } from '$lib/navItems';
   import CommandPalette from '$lib/components/CommandPalette.svelte';
   import { getPalette } from '$lib/stores/commandPalette.svelte';
   import AmbientGlow from '$lib/components/AmbientGlow.svelte';
-  import BottomNav from '$lib/components/BottomNav.svelte';
-  import AllMenusSheet from '$lib/components/AllMenusSheet.svelte';
   import { getAmbientStore } from '$lib/stores/ambient.svelte';
   import { getPro } from '$lib/stores/pro.svelte';
+  import { refreshSessionPermissions, resetSessionPermissions } from '$lib/stores/session.svelte';
+  import { getAppAccent } from '$lib/accent';
 
-  let isCollapsed = $state(false);
+  const navConfig = getNavigationConfig();
+  const storedCollapsed = typeof localStorage !== 'undefined' ? localStorage.getItem('caf_sidebar_collapsed') : null;
+  let isCollapsed = $state(storedCollapsed !== null ? storedCollapsed === 'true' : navConfig.collapsedDefault);
   let isVaultUnlocked = $state(false);
   let mobileDrawerOpen = $state(false);
-  let allMenusSheetOpen = $state(false);
   let pendingCrashReport = $state<ScrubbedCrashReport | null>(null);
 
   const theme = getTheme();
+  const accent = getAppAccent();
   const aiChat = getAiChatState();
   const feedbackPrompt = getFeedbackPromptState();
   const toasts = $derived(getToasts());
@@ -63,6 +65,7 @@
   });
 
   const navItems = $derived(getNavItems());
+  const primaryItem = $derived(primaryNavItem());
   const settingsItem = $derived(settingsNavItem());
 
   function isActive(href: string): boolean {
@@ -79,6 +82,9 @@
     checkVaultUnlocked()
       .then((unlocked) => {
         isVaultUnlocked = unlocked;
+        if (unlocked) {
+          refreshSessionPermissions().catch(() => {});
+        }
       })
       .catch(() => {
         isVaultUnlocked = false;
@@ -96,10 +102,14 @@
   async function handleLock() {
     await lockVault();
     isVaultUnlocked = false;
+    resetSessionPermissions();
   }
 
   function toggleSidebar() {
     isCollapsed = !isCollapsed;
+    try {
+      localStorage.setItem('caf_sidebar_collapsed', String(isCollapsed));
+    } catch {}
   }
 
   function handleAiToggle() {
@@ -125,7 +135,6 @@
   onkeydown={(e) => {
     if (e.key === 'Escape') {
       mobileDrawerOpen = false;
-      allMenusSheetOpen = false;
       closeAiChat();
     }
   }}
@@ -193,7 +202,7 @@
 
         <!-- 3. Header Quick Controls (Themes, Language, Settings) -->
         <HeaderQuickControls
-          layout="single"
+          layout={1}
           showFiles={false}
           aiOpen={aiChat.open}
           sessionCount={1}
@@ -311,12 +320,26 @@
       </div>
     </div>
 
+    <!-- Primary Action Button: Floating button on phone widths only, visible on every screen except primary's own (A-04 §2) -->
+    {#if primaryItem && !isActive(primaryItem.href)}
+      <a
+        href={primaryItem.href}
+        class="md:hidden fixed bottom-5 left-4 z-40 min-h-[44px] px-4 py-2.5 rounded-full {accent.primary} {accent.primaryHover} font-medium shadow-lg shadow-sky-600/30 flex items-center gap-2 text-sm cursor-pointer transition-all active:scale-95"
+        aria-label={`Buka ${primaryItem.label}`}
+      >
+        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={primaryItem.path} />
+        </svg>
+        <span>{primaryItem.label}</span>
+      </a>
+    {/if}
+
     <!-- Floating Action Button: Hana AI (Magic Sparkle Prompt Studio Icon) -->
     {#if !aiChat.open}
       <button
         type="button"
         onclick={() => handleAiToggle()}
-        class="fixed bottom-20 right-4 md:bottom-5 md:right-5 z-40 flex items-center gap-2 px-3.5 py-2 rounded-full bg-neutral-900/90 hover:bg-neutral-800 text-neutral-100 border border-neutral-700/80 shadow-2xl shadow-black/60 hover:scale-105 active:scale-95 transition-all text-xs font-semibold cursor-pointer group"
+        class="fixed bottom-5 right-4 md:bottom-5 md:right-5 z-40 flex items-center gap-2 px-3.5 py-2 rounded-full bg-neutral-900/90 hover:bg-neutral-800 text-neutral-100 border border-neutral-700/80 shadow-2xl shadow-black/60 hover:scale-105 active:scale-95 transition-all text-xs font-semibold cursor-pointer group min-h-[44px]"
         title={"Hana AI (CAFramework Assistant)"}
         aria-label={"Open Hana AI"}
       >
@@ -328,9 +351,80 @@
       </button>
     {/if}
 
-    <!-- Mobile Bottom Navigation Bar & All Menus Grid Sheet -->
-    <BottomNav onOpenAll={() => (allMenusSheetOpen = true)} />
-    <AllMenusSheet bind:open={allMenusSheetOpen} onClose={() => (allMenusSheetOpen = false)} />
+    <!-- Mobile Navigation Drawer (Phone widths < 600px / md:hidden per A-04) -->
+    {#if mobileDrawerOpen}
+      <div
+        class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs md:hidden transition-opacity"
+        onclick={() => (mobileDrawerOpen = false)}
+        aria-hidden="true"
+      ></div>
+
+      <aside
+        class="fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] bg-white dark:bg-[#121212] border-r border-neutral-200 dark:border-neutral-800 shadow-2xl flex flex-col md:hidden select-none"
+        role="dialog"
+        aria-modal="true"
+        aria-label={t('common.navigation')}
+      >
+        <div class="h-14 flex items-center justify-between px-4 border-b border-neutral-200 dark:border-neutral-800 shrink-0">
+          <div class="flex items-center gap-2 min-w-0">
+            <Logo size={22} mode="brand" />
+            <span class="font-bold text-neutral-900 dark:text-white text-base tracking-tight truncate">{APP_NAME}</span>
+            <span class="text-[10px] px-1.5 py-0.5 rounded border border-neutral-300 dark:border-neutral-700 text-neutral-500 font-mono shrink-0">v{APP_VERSION}</span>
+          </div>
+          <button
+            type="button"
+            onclick={() => (mobileDrawerOpen = false)}
+            class="p-2 rounded-lg text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center"
+            aria-label={t('common.close')}
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <nav class="flex-1 min-h-0 overflow-y-auto p-3 space-y-1 text-sm">
+          {#each navItems as item (item.href)}
+            <a
+              href={item.href}
+              onclick={() => (mobileDrawerOpen = false)}
+              aria-current={isActive(item.href) ? 'page' : undefined}
+              class="min-h-[44px] px-3 py-2.5 rounded-lg flex items-center gap-3 transition-colors {isActive(item.href) ? 'bg-neutral-200/80 dark:bg-neutral-800/80 text-neutral-900 dark:text-white font-medium' : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800/50 hover:text-neutral-900 dark:hover:text-white'}"
+            >
+              <div class="w-5 h-5 flex items-center justify-center shrink-0">
+                <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d={item.path} />
+                </svg>
+              </div>
+              <span class="truncate flex-1">{item.label}</span>
+              {#if item.isPrimary}
+                <span class="text-[10px] px-1.5 py-0.5 rounded {accent.bgSubtle} font-medium">Utama</span>
+              {/if}
+            </a>
+          {/each}
+
+          <div class="pt-2 border-t border-neutral-200 dark:border-neutral-800 mt-2">
+            <a
+              href="/settings"
+              onclick={() => (mobileDrawerOpen = false)}
+              aria-current={isActive('/settings') ? 'page' : undefined}
+              class="min-h-[44px] px-3 py-2.5 rounded-lg flex items-center gap-3 transition-colors {isActive('/settings') ? 'bg-neutral-200/80 dark:bg-neutral-800/80 text-neutral-900 dark:text-white font-medium' : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800/50 hover:text-neutral-900 dark:hover:text-white'}"
+            >
+              <div class="w-5 h-5 flex items-center justify-center shrink-0">
+                <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d={settingsItem.path} />
+                </svg>
+              </div>
+              <span class="truncate flex-1">{settingsItem.label}</span>
+            </a>
+          </div>
+        </nav>
+
+        <div class="p-3 border-t border-neutral-200 dark:border-neutral-800 shrink-0">
+          <ProfileMenu collapsed={false} onLock={handleLock} onSignOut={() => {}} />
+        </div>
+      </aside>
+    {/if}
 
     {#if pendingCrashReport}
       <CrashReportModal

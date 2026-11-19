@@ -86,10 +86,10 @@
       <p class="text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
         {t('crash.whatHappened')}
       </p>
-      <p class="text-sm text-neutral-800 dark:text-neutral-200 break-words">{report.message}</p>
-      {#if report.location}
+      <p class="text-sm text-neutral-800 dark:text-neutral-200 break-words">{report.payload || report.error_type}</p>
+      {#if (report as any).location}
         <p class="text-xs text-neutral-500 dark:text-neutral-400">
-          {t('crash.location', { location: report.location })}
+          {t('crash.location', { location: (report as any).location })}
         </p>
       {/if}
     </div>
@@ -103,7 +103,7 @@
         {showDetails ? t('crash.hideDetails') : t('crash.viewDetails')}
       </button>
       {#if showDetails}
-        <pre class="mt-2 p-3 bg-neutral-950 text-neutral-300 text-[11px] leading-relaxed rounded-lg overflow-auto max-h-56">{report.previewJson}</pre>
+        <pre class="mt-2 p-3 bg-neutral-950 text-neutral-300 text-[11px] leading-relaxed rounded-lg overflow-auto max-h-56">{report.payload}</pre>
       {/if}
     </div>
 

@@ -167,6 +167,11 @@ pub async fn session_info() -> Result<session::SessionInfo, CafError> {
     run_guarded("session_info", session::session_info).await
 }
 
+#[tauri::command]
+pub async fn session_permissions() -> Result<Vec<String>, CafError> {
+    run_guarded("session_permissions", session::session_permissions).await
+}
+
 // RBAC commands
 #[tauri::command]
 pub async fn list_roles() -> Result<Vec<rbac::RoleRecord>, CafError> {

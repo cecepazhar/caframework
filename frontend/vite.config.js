@@ -1,7 +1,6 @@
 import { defineConfig } from "vite";
 import { sveltekit } from "@sveltejs/kit/vite";
 import tailwindcss from "@tailwindcss/vite";
-// @ts-expect-error type error without @types/node package
 import process from "node:process";
 import {
   getEnabledModules,
@@ -15,6 +14,7 @@ const enabledModules = getEnabledModules();
 function cafModuleExclusionPlugin() {
   return {
     name: "caf-module-exclusion",
+    /** @param {any} config */
     configResolved(config) {
       if (config.command === "build") {
         stashDisabledModules();
@@ -42,6 +42,7 @@ process.on("SIGTERM", () => {
   process.exit(143);
 });
 
+/** @type {Record<string, string>} */
 const defines = {
   "import.meta.env.CAF_ENABLED_MODULES": JSON.stringify(enabledModules),
 };

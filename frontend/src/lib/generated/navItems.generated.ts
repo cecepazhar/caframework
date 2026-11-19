@@ -10,6 +10,16 @@ export interface GeneratedNavItem {
   permission: string;
 }
 
+export interface NavigationConfig {
+  primaryAction: string | null;
+  collapsedDefault: boolean;
+}
+
+export const NAVIGATION_CONFIG: NavigationConfig = {
+  primaryAction: "notes",
+  collapsedDefault: false,
+};
+
 export const GENERATED_NAV_ITEMS: GeneratedNavItem[] = [
   {
     key: "notes",

@@ -136,6 +136,7 @@ pub fn run_with_start(start: std::time::Instant) {
             #[cfg(feature = "mod-profiles")]
             commands::profile_lock,
             commands::session_info,
+            commands::session_permissions,
             commands::list_roles,
             commands::save_role,
             commands::delete_role,

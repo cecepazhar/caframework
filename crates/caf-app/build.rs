@@ -32,6 +32,7 @@ const COMMANDS: &[&str] = &[
     #[cfg(feature = "mod-profiles")]
     "profile_lock",
     "session_info",
+    "session_permissions",
     "list_roles",
     "save_role",
     "delete_role",

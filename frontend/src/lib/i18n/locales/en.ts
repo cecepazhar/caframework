@@ -48,6 +48,12 @@ const en = {
     rename: 'Rename',
     clone: 'Clone',
     clear: 'Clear',
+    developer: 'Developer',
+    company: 'Company / Studio',
+    website: 'Website',
+    email: 'Contact Email',
+    phone: 'Phone',
+    support: 'Support',
     select: 'Select',
     selected: 'Selected',
     optional: 'Optional',
@@ -1362,9 +1368,7 @@ const en = {
     setGroup: 'Set Group',
     removeGroup: 'Remove from Group',
     closeGroup: 'Close Group "{{group}}"',
-    closeSession: 'Close session',
-    allMenus: 'All Menus',
-    bottomNav: 'Bottom Navigation'
+    closeSession: 'Close session'
   },
   sftp: {
     title: 'Files (SFTP)',

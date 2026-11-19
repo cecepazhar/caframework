@@ -69,8 +69,11 @@ export interface ScrubbedCrashReport {
 }
 
 export interface PerformancePrefs {
-  enable_hardware_acceleration: boolean;
-  enable_smooth_scrolling: boolean;
+  gpuAcceleration: boolean;
+  backgroundMemorySaving: boolean;
+  scrollbackLines: number;
+  inactiveSessionSleep: boolean;
+  lowPowerMode: boolean;
 }
 
 // Session & RBAC commands
@@ -84,6 +87,10 @@ export async function cmdProfileLock(): Promise<void> {
 
 export async function cmdSessionInfo(): Promise<any> {
   return await invoke('session_info');
+}
+
+export async function cmdSessionPermissions(): Promise<string[]> {
+  return await invoke('session_permissions');
 }
 
 // Window commands

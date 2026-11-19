@@ -52,7 +52,7 @@ pub fn export_entity(entity_key: &str, format: &str) -> Result<ExportResult, Caf
     let (row_count, private_reads_count) = match fmt.as_str() {
         "csv" => {
             let file = File::create(&file_path).map_err(|e| CafError::generic(e.to_string()))?;
-            let mut writer = BufWriter::with_capacity(128 * 1024, file);
+            let mut writer = BufWriter::with_capacity(512 * 1024, file);
 
             // Write header (no neutralization for field names)
             write_csv_row(&mut writer, &field_names, false)?;

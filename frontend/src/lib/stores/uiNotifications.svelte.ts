@@ -47,22 +47,46 @@ export function getConfirmDialog(): ConfirmDialogState {
   return confirmDialog;
 }
 
+export interface ConfirmModalOptions {
+  message: string;
+  title?: string;
+  danger?: boolean;
+  confirmText?: string;
+  cancelText?: string;
+}
+
 export function confirmModal(
-  message: string,
+  messageOrOptions: string | ConfirmModalOptions,
   // Defaults resolve at call time, so they follow the language active when the dialog opens.
   title = t('notify.confirmTitle'),
   danger = false,
   confirmText = t('notify.continue'),
   cancelText = t('common.cancel')
 ): Promise<boolean> {
+  let msg: string;
+  let tTitle = title;
+  let isDanger = danger;
+  let cText = confirmText;
+  let canText = cancelText;
+
+  if (typeof messageOrOptions === 'object') {
+    msg = messageOrOptions.message;
+    if (messageOrOptions.title) tTitle = messageOrOptions.title;
+    if (messageOrOptions.danger !== undefined) isDanger = messageOrOptions.danger;
+    if (messageOrOptions.confirmText) cText = messageOrOptions.confirmText;
+    if (messageOrOptions.cancelText) canText = messageOrOptions.cancelText;
+  } else {
+    msg = messageOrOptions;
+  }
+
   return new Promise((resolve) => {
     confirmDialog = {
       isOpen: true,
-      title,
-      message,
-      confirmText,
-      cancelText,
-      danger,
+      title: tTitle,
+      message: msg,
+      confirmText: cText,
+      cancelText: canText,
+      danger: isDanger,
       resolve
     };
   });

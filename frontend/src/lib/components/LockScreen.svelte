@@ -12,6 +12,7 @@
   import { cmdWindowMinimize, cmdWindowMaximize, cmdWindowClose, cmdWindowStartDragging } from '$lib/generated/commands';
   import { errorText } from '$lib/errors';
   import { t } from '$lib/i18n/index.svelte';
+  import { BRAND_CONFIG } from '$lib/generated/brand';
   import LanguageSwitcher from './LanguageSwitcher.svelte';
   import ProLoginForm from './ProLoginForm.svelte';
   import type { ProAccount } from '$lib/api/pro';
@@ -298,6 +299,7 @@
 </script>
 
 <div
+  role="presentation"
   data-tauri-drag-region
   class="fixed inset-0 z-50 flex bg-neutral-50 dark:bg-[#0a0a0a] text-neutral-900 dark:text-white select-none cursor-default"
   onmousedown={startDragging}
@@ -504,7 +506,7 @@
                 type="text"
                 bind:value={setupName}
                 maxlength="48"
-                placeholder="CATerm User"
+                placeholder={"User"}
                 class="w-full px-4 py-3 bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 rounded-lg text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-600 focus:outline-none focus:border-sky-500 transition-colors"
               />
             </div>
@@ -518,7 +520,7 @@
                 bind:value={password}
                 onkeydown={handleKeydown}
                 disabled={isLockedOut}
-                placeholder="••••••••••••"
+                placeholder={"••••••••••••"}
                 class="w-full pl-4 pr-11 py-3 bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 rounded-lg text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-600 focus:outline-none focus:border-sky-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               />
               <button
@@ -572,6 +574,18 @@
         {/if}
         <span>{t('lock.vaultEncrypted')}</span>
       </div>
+
+      {#if BRAND_CONFIG.showOnLockScreen}
+        <footer class="text-center text-xs text-neutral-400 dark:text-neutral-500 pt-3 flex flex-col items-center gap-0.5 select-none">
+          <p>{BRAND_CONFIG.developer}{BRAND_CONFIG.company ? ` • ${BRAND_CONFIG.company}` : ''}</p>
+          <p class="space-x-2">
+            <a href={BRAND_CONFIG.website} target="_blank" rel="noreferrer" class="hover:underline">{BRAND_CONFIG.website}</a>
+            <span>•</span>
+            <a href={`mailto:${BRAND_CONFIG.email}`} class="hover:underline">{BRAND_CONFIG.email}</a>
+          </p>
+          <p class="text-[10px]">{BRAND_CONFIG.copyright.replace('{year}', new Date().getFullYear().toString())}</p>
+        </footer>
+      {/if}
     </div>
   </div>
 </div>

@@ -2,9 +2,11 @@
 // and drifted (sidebar said v2.1.7 while build was 2.1.8). package.json bumped in
 // lockstep with Cargo workspace / tauri.conf.json on release.
 import { version } from '../../package.json';
+import { APP_CONFIG } from '$lib/generated/app';
 
 export const APP_VERSION: string = version;
-export const APP_NAME = 'CAFramework';
+export const APP_NAME = APP_CONFIG.name;
+export const APP_ACCENT = APP_CONFIG.accent;
 export const REPO_URL = 'https://github.com/cecepazhar/caterm';
 export const WEBSITE_URL = 'https://caterm.fathforce.com';
 export const AUTHOR_URL = 'https://cecepazhar.com';

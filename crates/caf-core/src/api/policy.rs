@@ -131,6 +131,12 @@ pub const COMMAND_POLICIES: &[CommandPolicy] = &[
         returns_list: false,
         module: None,
     },
+    CommandPolicy {
+        name: "session_permissions",
+        policy: Policy::Public,
+        returns_list: true,
+        module: None,
+    },
     // RBAC
     CommandPolicy {
         name: "list_roles",

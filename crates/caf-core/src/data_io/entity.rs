@@ -180,9 +180,9 @@ fn register_builtin_notes(registry: &RwLock<EntityRegistryMap>) {
             on_row: &mut dyn FnMut(&[(&str, &str)]) -> Result<(), CafError>,
         ) -> Result<(usize, usize), CafError> {
             let sql = if is_super {
-                "SELECT id, title, content, tags, visibility, owner_profile_id, created_at, updated_at FROM notes WHERE deleted_at IS NULL ORDER BY created_at ASC"
+                "SELECT id, title, content, tags, visibility, owner_profile_id, created_at, updated_at FROM notes WHERE deleted_at IS NULL ORDER BY rowid ASC"
             } else {
-                "SELECT id, title, content, tags, visibility, owner_profile_id, created_at, updated_at FROM notes WHERE deleted_at IS NULL AND (owner_profile_id = ?1 OR visibility = 'shared') ORDER BY created_at ASC"
+                "SELECT id, title, content, tags, visibility, owner_profile_id, created_at, updated_at FROM notes WHERE deleted_at IS NULL AND (owner_profile_id = ?1 OR visibility = 'shared') ORDER BY rowid ASC"
             };
 
             let mut stmt = conn
@@ -204,59 +204,85 @@ fn register_builtin_notes(registry: &RwLock<EntityRegistryMap>) {
                 .map_err(|e| CafError::Db(DbError::Generic(e.to_string())))?
             {
                 total_count += 1;
-                let id: String = r
-                    .get(0)
-                    .map_err(|e| CafError::Db(DbError::Generic(e.to_string())))?;
-                let title: String = r
-                    .get(1)
-                    .map_err(|e| CafError::Db(DbError::Generic(e.to_string())))?;
-                let content: String = r
-                    .get::<_, Option<String>>(2)
+                let id = r
+                    .get_ref(0)
                     .map_err(|e| CafError::Db(DbError::Generic(e.to_string())))?
-                    .unwrap_or_default();
-                let tags_raw: String = r
-                    .get::<_, Option<String>>(3)
+                    .as_str()
+                    .unwrap_or("");
+                let title = r
+                    .get_ref(1)
                     .map_err(|e| CafError::Db(DbError::Generic(e.to_string())))?
-                    .unwrap_or_default();
+                    .as_str()
+                    .unwrap_or("");
+                let content = match r
+                    .get_ref(2)
+                    .map_err(|e| CafError::Db(DbError::Generic(e.to_string())))?
+                {
+                    rusqlite::types::ValueRef::Text(s) => std::str::from_utf8(s).unwrap_or(""),
+                    _ => "",
+                };
+                let tags_raw = match r
+                    .get_ref(3)
+                    .map_err(|e| CafError::Db(DbError::Generic(e.to_string())))?
+                {
+                    rusqlite::types::ValueRef::Text(s) => std::str::from_utf8(s).unwrap_or(""),
+                    _ => "",
+                };
+                let tags_buf;
                 let tags = if tags_raw == "[]" || tags_raw.is_empty() {
-                    String::new()
+                    ""
                 } else if tags_raw.starts_with('[') {
-                    serde_json::from_str::<Vec<String>>(&tags_raw)
+                    tags_buf = serde_json::from_str::<Vec<String>>(tags_raw)
                         .unwrap_or_default()
-                        .join(", ")
+                        .join(", ");
+                    tags_buf.as_str()
                 } else {
                     tags_raw
                 };
-                let visibility: String = r
-                    .get::<_, Option<String>>(4)
+                let visibility = match r
+                    .get_ref(4)
                     .map_err(|e| CafError::Db(DbError::Generic(e.to_string())))?
-                    .unwrap_or_else(|| "shared".into());
-                let owner: String = r
-                    .get::<_, Option<String>>(5)
+                {
+                    rusqlite::types::ValueRef::Text(s) => {
+                        std::str::from_utf8(s).unwrap_or("shared")
+                    }
+                    _ => "shared",
+                };
+                let owner = match r
+                    .get_ref(5)
                     .map_err(|e| CafError::Db(DbError::Generic(e.to_string())))?
-                    .unwrap_or_default();
-                let created_at: String = r
-                    .get::<_, Option<String>>(6)
+                {
+                    rusqlite::types::ValueRef::Text(s) => std::str::from_utf8(s).unwrap_or(""),
+                    _ => "",
+                };
+                let created_at = match r
+                    .get_ref(6)
                     .map_err(|e| CafError::Db(DbError::Generic(e.to_string())))?
-                    .unwrap_or_default();
-                let updated_at: String = r
-                    .get::<_, Option<String>>(7)
+                {
+                    rusqlite::types::ValueRef::Text(s) => std::str::from_utf8(s).unwrap_or(""),
+                    _ => "",
+                };
+                let updated_at = match r
+                    .get_ref(7)
                     .map_err(|e| CafError::Db(DbError::Generic(e.to_string())))?
-                    .unwrap_or_default();
+                {
+                    rusqlite::types::ValueRef::Text(s) => std::str::from_utf8(s).unwrap_or(""),
+                    _ => "",
+                };
 
                 if is_super && owner != actor_profile_id && visibility != "shared" {
                     private_reads_count += 1;
                 }
 
                 let fields = [
-                    ("id", id.as_str()),
-                    ("title", title.as_str()),
-                    ("content", content.as_str()),
-                    ("tags", tags.as_str()),
-                    ("visibility", visibility.as_str()),
-                    ("owner_profile_id", owner.as_str()),
-                    ("created_at", created_at.as_str()),
-                    ("updated_at", updated_at.as_str()),
+                    ("id", id),
+                    ("title", title),
+                    ("content", content),
+                    ("tags", tags),
+                    ("visibility", visibility),
+                    ("owner_profile_id", owner),
+                    ("created_at", created_at),
+                    ("updated_at", updated_at),
                 ];
 
                 on_row(&fields)?;

@@ -8,6 +8,6 @@ export const BRAND_CONFIG = {
   phone: "+6285220696117",
   supportUrl: "",
   copyright: "© {year} Cecep Saeful Azhar Hidayat, ST",
-  logo: "assets/logo.svg",
+  logo: "assets/variants/lite/icon.png",
   showOnLockScreen: true
 } as const;
